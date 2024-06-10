@@ -29,6 +29,7 @@
 #
 # Required Softwares:
 # - Unicycler
+# - SPADES
 # - Standalone BLAST
 # - bowtie2
 # - Samtools
