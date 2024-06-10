@@ -49,11 +49,10 @@ BLOBTOOLS_CONDA='Path to blobtools conda environment'
 MEGAHIT_CONDA='Path to megahit conda environment'
 
 # Software paths
-BLASTN='<BLAST+ directory>/bin/blastn'
-BLOBTOOLS='<Blobtools directory>/blobtools'
-BOWTIE2_INDEX='<bowtie2 directory>/bowtie2-build'
-BOWTIE2='<bowtie2 directory>/bowtie2'
-SAMTOOLS='<samtools directory>/samtools'
+BLAST='<BLAST+ directory>'
+BLOBTOOLS='<Blobtools directory>'
+BOWTIE2='<bowtie2 directory>'
+SAMTOOLS='<samtools directory>'
 
 # Database paths
 BLOBTOOLS_DB='Path to blobtools nodesDB'
@@ -78,6 +77,21 @@ THREADS='<number of CPUs>'	# More than 16 is recommended
 #===============================================================================================#
 
 # DON'T MODIFY THE SCRIPT BELOW!!
+
+set_software_paths() {
+	# blast
+	BLASTN="${BLAST}/bin/blastn"
+
+	# blobtools
+	BLOBTOOLS="${BLOBTOOLS}/blobtools"
+
+	# bowtie
+	BOWTIE2_INDEX="${BOWTIE2}/bowtie2-build"
+	BOWTIE2="${BOWTIE2}/bowtie2"
+
+	# samtools
+	SAMTOOLS="${SAMTOOLS}/samtools"
+}
 
 activate_conda() {
     source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
@@ -190,6 +204,9 @@ main() {
 	## Create running directory if doesn't exist
     mkdir -p "${RUN_DIR}"
     cd "${RUN_DIR}" || exit
+
+	## Set software paths
+	set_software_paths
 
 	## Run MEGAHIT to assemble the reads
     run_megahit

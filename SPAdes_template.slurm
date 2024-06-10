@@ -45,9 +45,9 @@ MINICONDA_DIR='Path to miniconda directory'
 BLOBTOOLS_CONDA='Path to blobtools conda environment'
 
 # Software paths
-BLASTN='<BLAST+ directory>/bin/blastn'
-BLOBTOOLS='<Blobtools directory>/blobtools'
-SPADES='<SPAdes directory>/bin/spades.py'	# Version 4 is recommended
+BLAST='<BLAST+ directory>'
+BLOBTOOLS='<Blobtools directory>'
+SPADES='<SPAdes directory>/'		# Version 4 is recommended
 
 # Database paths
 BLOBTOOLS_DB='Path to blobtools nodesDB'
@@ -70,6 +70,17 @@ MEMORY='<size of RAM>'		# More than 100G is recommended
 #===============================================================================================#
 
 # DON'T MODIFY THE SCRIPT BELOW!!
+
+set_software_paths() {
+	# blast
+	BLASTN="${BLAST}/bin/blastn"
+
+	# blobtools
+	BLOBTOOLS="${BLOBTOOLS}/blobtools"
+
+	# spades
+	SPADES="${SPADES}/bin/spades.py"
+}
 
 activate_conda() {
     source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
@@ -141,6 +152,9 @@ main() {
 	## Create running directory if doesn't exist
     mkdir -p "${RUN_DIR}"
     cd "${RUN_DIR}" || exit
+
+	## Set software paths
+	set_software_paths
 
 	# module installation
 	module purge
