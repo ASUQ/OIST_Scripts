@@ -14,6 +14,19 @@
 
 #===============================================================================================#
 
+# Description:
+# This script is a template for running job with Deigo (computer cluster at OIST).
+#
+# Workflow:
+#
+# Expected Inputs:
+#
+# Required Softwares:
+#
+# Usage:
+
+#===============================================================================================#
+
 ## Edit this part before running the script
 
 #-------------Softwares--------------#
