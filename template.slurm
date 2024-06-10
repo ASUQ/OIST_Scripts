@@ -12,20 +12,51 @@
 ### Slurm information: https://groups.oist.jp/scs/use-slurm
 ### Save as /path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.slurm
 
+#===============================================================================================#
+
+## Edit this part before running the script
+
 #-------------Softwares--------------#
+# Conda env paths
+MINICONDA_DIR='Path to miniconda directory'
+
+# Software paths
+
+# Database paths
+
+#------------------------------------#
+
+#---------------Inputs---------------#
+RUN_DIR='<Path to directory for running job>'
+#------------------------------------#
+
+#-------------Parameters-------------#
 
 #------------------------------------#
 
 
-# Define file and directory paths
-RUN_DIR='RUN_DIR'
+#===============================================================================================#
 
-# Create running directory if doesn't exist
-mkdir -p $RUN_DIR
-cd $RUN_DIR || exit
+# DON'T MODIFY THE SCRIPT BELOW!!
 
-### Add your code here
+main() {
+    #＃ Add conda to your PATH
+	source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
 
+	## Create running directory if doesn't exist
+    mkdir -p "${RUN_DIR}"
+    cd "${RUN_DIR}" || exit
+
+	# module installation
+
+	# Run functions
+
+    echo 'JOB COMPLETED'
+}
+
+
+# Execute main function
+main
 
 ### Run with $ sbatch /path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.slurm
 ### To check the running jobs, run $ squeue
