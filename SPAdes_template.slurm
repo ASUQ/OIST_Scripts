@@ -76,7 +76,7 @@ run_spades() {
 	echo "Running SPAdes"
 	echo "-----------------------------------------------"
     ${SPADES} -o "${RUN_DIR}" -1 "${read_f}" -2 "${read_r}" \
-		-k 21,33,55,77,99,119,127 --meta --threads "${THREADS:-16}" --memory "${MEMORY:-100}"
+		-k 21,33,55,77,99,119,127 --careful --threads "${THREADS:-16}" --memory "${MEMORY:-100}"
 
     if [ $? -ne 0 ]; then
         echo "SPAdes failed" >&2
