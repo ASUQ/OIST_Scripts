@@ -76,7 +76,7 @@ run_spades() {
 	echo 'Running SPAdes'
 	echo '-----------------------------------------------'
     ${SPADES} -o "${RUN_DIR}" -1 "${read_f}" -2 "${read_r}" \
-		-k 21,33,55,77,99,119,127 --careful --threads "${THREADS:-16}" --memory "${MEMORY:-100}"
+		-k 21,33,55,77,99,119,127 --careful --threads $((THREADS)) --memory $((MEMORY))
 
     if [ $? -ne 0 ]; then
         echo "SPAdes failed" >&2
@@ -91,7 +91,7 @@ run_blastn() {
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/scaffolds.fasta" \
 	-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
-	-culling_limit 5 -num_threads "${THREADS}" -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/scaffolds_vs_nt.blast"
+	-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/scaffolds_vs_nt.blast"
 
     if [ $? -ne 0 ]; then
         echo "megablast failed" >&2
