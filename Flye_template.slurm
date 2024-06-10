@@ -95,7 +95,7 @@ run_flye() {
 
 	conda activate "${FLYE_CONDA}"
 
-	flye --nanopore-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
+	flye --nano-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
 
     if [ $? -ne 0 ]; then
         echo "Flye failed" >&2
