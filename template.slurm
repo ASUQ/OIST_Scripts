@@ -39,9 +39,17 @@ RUN_DIR='<Path to directory for running job>'
 
 # DON'T MODIFY THE SCRIPT BELOW!!
 
+activate_conda() {
+    source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+    if ! command -v conda &> /dev/null; then
+        echo "conda could not be found"
+        exit 1
+    fi
+}
+
 main() {
     #＃ Add conda to your PATH
-	source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+	activate_conda
 
 	## Create running directory if doesn't exist
     mkdir -p "${RUN_DIR}"

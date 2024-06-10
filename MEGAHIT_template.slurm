@@ -79,6 +79,14 @@ THREADS='<number of CPUs>'	# More than 16 is recommended
 
 # DON'T MODIFY THE SCRIPT BELOW!!
 
+activate_conda() {
+    source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+    if ! command -v conda &> /dev/null; then
+        echo "conda could not be found"
+        exit 1
+    fi
+}
+
 run_megahit() {
     echo '-----------------------------------------------'
 	echo 'Running MEGAHIT'
@@ -114,7 +122,7 @@ run_blastn() {
 
 run_bowtie2() {
 	echo '-----------------------------------------------'
-	echo 'Running bowite2'
+	echo 'Running bowtie2'
 	echo '-----------------------------------------------'
 
 	mkdir -p bowtie2
@@ -177,7 +185,7 @@ run_blobtools() {
 
 main() {
     #＃ Add conda to your PATH
-	source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+	activate_conda
 
 	## Create running directory if doesn't exist
     mkdir -p "${RUN_DIR}"
@@ -195,7 +203,7 @@ main() {
 	## Run samtools to convert sam file to sorted bam file and index
 	run_samtools
 
-	## Run blobtools to summerize the blastn result
+	## Run blobtools to summarize the blastn result
     run_blobtools
 
     echo 'JOB COMPLETED'

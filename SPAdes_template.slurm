@@ -71,6 +71,14 @@ MEMORY='<size of RAM>'		# More than 100G is recommended
 
 # DON'T MODIFY THE SCRIPT BELOW!!
 
+activate_conda() {
+    source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+    if ! command -v conda &> /dev/null; then
+        echo "conda could not be found"
+        exit 1
+    fi
+}
+
 run_spades() {
     echo '-----------------------------------------------'
 	echo 'Running SPAdes'
@@ -128,7 +136,7 @@ run_blobtools() {
 
 main() {
     #＃ Add conda to your PATH
-	source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+	activate_conda
 
 	## Create running directory if doesn't exist
     mkdir -p "${RUN_DIR}"
@@ -144,7 +152,7 @@ main() {
 	## Run megablast to taxonomically annotate the scaffolds
     run_blastn
 
-	## Run blobtools to summerize the blastn result
+	## Run blobtools to summarize the blastn result
     run_blobtools
 
     echo 'JOB COMPLETED'
