@@ -7,7 +7,7 @@
 #SBATCH --job-name=MMDD_Job
 #SBATCH --output=/path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.log
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=your.name@oist.jp
+#SBATCH --mail-user=your-name@oist.jp
 
 ### Slurm information: https://groups.oist.jp/scs/use-slurm
 ### Save as /path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.slurm
