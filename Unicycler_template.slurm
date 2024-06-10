@@ -19,10 +19,10 @@
 #
 # Workflow:
 # 1. Extract reads of bacteria with bowtie2
-# 2. Assembling extracted reads with Unicycler
-# 3. Annotating scaffolds taxonomically with megablast
+# 2. Assemble extracted reads with Unicycler
+# 3. Annotate scaffolds taxonomically with megablast
 # 4. Map reads onto assembly with bowtie2 and samtools
-# 5. Summarizing results with Blobtools
+# 5. Summarize results with Blobtools
 #
 # Expected Inputs:
 # - Illumina pair-end reads (quality controlled)

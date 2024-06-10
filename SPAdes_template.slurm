@@ -18,9 +18,9 @@
 # This script is for assembling Illumina short-read data with Deigo (computer cluster at OIST).
 #
 # Workflow:
-# 1. Assembling short-reads with SPAdes
-# 2. Annotating scaffolds taxonomically with megablast
-# 3. Summarizing results with Blobtools
+# 1. Assemble short-reads with SPAdes
+# 2. Annotate scaffolds taxonomically with megablast
+# 3. Summarize results with Blobtools
 #
 # Expected Inputs:
 # - Illumina pair-end reads (quality controlled)
