@@ -1,0 +1,207 @@
+#!/bin/bash
+#SBATCH --partition compute
+#SBATCH --time 4-0
+#SBATCH --mem=200G
+#SBATCH --cpus-per-task 32
+#SBATCH --nodes 1
+#SBATCH --job-name=MMDD_Job
+#SBATCH --output=/path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.log
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=your.name@oist.jp
+
+### Slurm information: https://groups.oist.jp/scs/use-slurm
+### Save as /path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.slurm
+
+#===============================================================================================#
+
+# Description:
+# This script is for assembling Illumina short-read data with Deigo (computer cluster at OIST).
+#
+# Workflow:
+# 1. Assembling short-reads with MEGAHIT
+# 2. Annotating scaffolds taxonomically with megablast
+# 3. Map reads onto assembly with bowtie2 and samtools
+# 4. Summarizing results with Blobtools
+#
+# Expected Inputs:
+# - Illumina pair-end reads (quality controlled)
+#
+# Required Softwares:
+# - MEGAHIT
+# - Standalone BLAST
+# - Blobtools v1
+# Note: Miniconda needs to be installed.
+#
+# Usage:
+# - The paths of inputs and softwares, and parameters are hardcoded.
+# - Make sure to update the script with the correct paths and input filenames before execution.
+
+#===============================================================================================#
+
+## Edit this part before running the script
+
+#-------------Softwares--------------#
+# Conda env paths
+MINICONDA_DIR='Path to miniconda directory'
+BLOBTOOLS_CONDA='Path to blobtools conda environment'
+MEGAHIT_CONDA='Path to megahit conda environment'
+
+# Software paths
+BLASTN='<BLAST+ directory>/bin/blastn'
+BLOBTOOLS='<Blobtools directory>/blobtools'
+BOWTIE2_INDEX='<bowtie2 directory>/bowtie2-build'
+BOWTIE2='<bowtie2 directory>/bowtie2'
+SAMTOOLS='<samtools directory>/samtools'
+
+# Database paths
+BLOBTOOLS_DB='Path to blobtools nodesDB'
+BLAST_NT_DB='Path to nt database from ncbi'
+#------------------------------------#
+
+#---------------Inputs---------------#
+RUN_DIR='<Path to directory for running job>'
+
+SAMPLE='<sample name>'
+
+read_f='<Illumina forward read>.fastq.gz'
+read_r='<Illumina reverse read>.fastq.gz'
+#------------------------------------#
+
+#-------------Parameters-------------#
+THREADS='<number of CPUs>'	# More than 16 is recommended
+# MEMORY='<size of RAM>'
+#------------------------------------#
+
+
+#===============================================================================================#
+
+# DON'T MODIFY THE SCRIPT BELOW!!
+
+run_megahit() {
+    echo '-----------------------------------------------'
+	echo 'Running MEGAHIT'
+	echo '-----------------------------------------------'
+
+	conda activate "${MEGAHIT_CONDA}"
+
+	megahit -1 "${read_f}" -2 "${read_r}" -o "${RUN_DIR}/Megahit" --out-prefix "${SAMPLE}_Megahit" \
+		--no-mercy --num-cpu-threads $((THREADS)) --memory 1.0
+
+    if [ $? -ne 0 ]; then
+        echo "MEGAHIT failed" >&2
+        exit 1
+    fi
+
+	conda deactivate
+}
+
+run_blastn() {
+	echo '-----------------------------------------------'
+	echo 'Running megablast'
+	echo '-----------------------------------------------'
+
+    ${BLASTN} -task megablast -query "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" \
+	-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
+	-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/contigs_vs_nt.blast"
+
+    if [ $? -ne 0 ]; then
+        echo "megablast failed" >&2
+        exit 1
+    fi
+}
+
+run_bowtie2() {
+	echo '-----------------------------------------------'
+	echo 'Running bowite2'
+	echo '-----------------------------------------------'
+
+	mkdir -p bowtie2
+
+	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit"
+	${BOWTIE2} -q --reorder --threads $((THREADS)) --time --met-stderr --met 10 \
+		-x "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit" -1 "${read_f}" -2 "${read_r}" > "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit".sam
+
+    if [ $? -ne 0 ]; then
+        echo "bowtie2 failed" >&2
+        exit 1
+    fi
+
+	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.*.bt2"
+}
+
+run_samtools() {
+	echo '-----------------------------------------------'
+	echo 'Running samtools'
+	echo '-----------------------------------------------'
+
+	${SAMTOOLS} sort --output-fmt BAM -=threads $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sam" -o "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam"
+
+	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sam"
+
+	${SAMTOOLS} index -b -@ $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam"
+
+	if [ $? -ne 0 ]; then
+        echo "samtools failed" >&2
+        exit 1
+    fi
+}
+
+run_blobtools() {
+	echo '-----------------------------------------------'
+	echo 'Running blobtools'
+	echo '-----------------------------------------------'
+
+    conda activate "${BLOBTOOLS_CONDA}"
+
+    ${BLOBTOOLS} create -i "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" -b "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
+		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
+
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r superkingdom -o "${RUN_DIR}/"
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r phylum -o "${RUN_DIR}/"
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r order -o "${RUN_DIR}/"
+
+
+    ${BLOBTOOLS} view -i "${RUN_DIR}/blobtools.blobDB.json" -r all -o "${RUN_DIR}/"
+
+	# Remove comments and extract data from blobtools view output
+	echo 'name,length,GC,N,coverage,superkingdom,phylum,order,family,genus,species' > "${RUN_DIR}/blobtools.blobDB.table.csv"
+	grep -v '^##' "${RUN_DIR}/blobtools.blobDB.table.txt" | \
+		grep -v '^#' |
+		cut --complement -f7,8,10,11,13,14,16,17,19,20,22,23 |
+		tr -s '\t' ',' >> "${RUN_DIR}/blobtools.blobDB.table.csv"
+
+	conda deactivate
+}
+
+main() {
+    #＃ Add conda to your PATH
+	source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+
+	## Create running directory if doesn't exist
+    mkdir -p "${RUN_DIR}"
+    cd "${RUN_DIR}" || exit
+
+	## Run MEGAHIT to assemble the reads
+    run_megahit
+
+	## Run megablast to taxonomically annotate the scaffolds
+    run_blastn
+
+	## Run bowtie2 to map the read to the reference
+	run_bowtie2
+
+	## Run samtools to convert sam file to sorted bam file and index
+	run_samtools
+
+	## Run blobtools to summerize the blastn result
+    run_blobtools
+
+    echo 'JOB COMPLETED'
+}
+
+
+# Execute main function
+main
+
+### Run with $ sbatch /path/to/personal/directory/Jobs/YYYYMM/MMDD_Job.slurm
+### To check the running jobs, run $ squeue
