@@ -29,6 +29,8 @@
 # Required Softwares:
 # - MEGAHIT
 # - Standalone BLAST
+# - bowtie2
+# - Samtools
 # - Blobtools v1
 # Note: Miniconda needs to be installed.
 #
