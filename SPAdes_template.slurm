@@ -72,9 +72,9 @@ MEMORY='<size of RAM>'		# More than 100G is recommended
 # DON'T MODIFY THE SCRIPT BELOW!!
 
 run_spades() {
-    echo "-----------------------------------------------"
-	echo "Running SPAdes"
-	echo "-----------------------------------------------"
+    echo '-----------------------------------------------'
+	echo 'Running SPAdes'
+	echo '-----------------------------------------------'
     ${SPADES} -o "${RUN_DIR}" -1 "${read_f}" -2 "${read_r}" \
 		-k 21,33,55,77,99,119,127 --careful --threads "${THREADS:-16}" --memory "${MEMORY:-100}"
 
@@ -84,11 +84,10 @@ run_spades() {
     fi
 }
 
-
 run_blastn() {
-	echo "-----------------------------------------------"
-	echo "Running megablast"
-	echo "-----------------------------------------------"
+	echo '-----------------------------------------------'
+	echo 'Running megablast'
+	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/scaffolds.fasta" \
 	-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
@@ -100,11 +99,10 @@ run_blastn() {
     fi
 }
 
-
 run_blobtools() {
-	echo "-----------------------------------------------"
-	echo "Running blobtools"
-	echo "-----------------------------------------------"
+	echo '-----------------------------------------------'
+	echo 'Running blobtools'
+	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"
 
@@ -127,7 +125,6 @@ run_blobtools() {
 
 	conda deactivate
 }
-
 
 main() {
     #＃ Add conda to your PATH
