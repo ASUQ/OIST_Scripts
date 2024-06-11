@@ -96,6 +96,10 @@ run_spades() {
 	echo 'Running SPAdes'
 	echo '-----------------------------------------------'
 
+	# module installation
+	module purge
+	module load python/3.11.4	# Default python version on Deigo is v3.6.8, v3.8+ is needed for SPAdes v4.0+
+
 	# For metagenome assembly, add --meta option and remove --careful option in SPAdes
     ${SPADES} -o "${RUN_DIR}" -1 "${read_f}" -2 "${read_r}" \
 		-k 21,33,55,77,99,119,127 --careful --threads $((THREADS)) --memory $((MEMORY))
@@ -104,6 +108,8 @@ run_spades() {
         echo "SPAdes failed" >&2
         exit 1
     fi
+
+	module purge
 }
 
 run_blastn() {
@@ -163,10 +169,6 @@ main() {
 
 	## Set software paths
 	set_software_paths
-
-	# module installation
-	module purge
-	module load python/3.11.4	# Default python version on Deigo is v3.6.8, v3.8+ is needed for SPAdes v4.0+
 
 	## Run SPAdes to assemble the reads
     run_spades

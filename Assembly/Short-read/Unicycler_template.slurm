@@ -145,6 +145,10 @@ run_unicycler() {
 	echo 'Running Unicycler'
 	echo '-----------------------------------------------'
 
+	# module installation
+	module purge
+	module load python/3.11.4	# Default python version on Deigo is v3.6.8, v3.8+ is needed for SPAdes v4.0+
+
 	${UNICYCLER} --short1 "${read_ex_f}" --short2 "${read_ex_r}" --out "${RUN_DIR}" \
 		--spades_path "${SPADES}" --makeblastdb_path "${MAKEBLASTDB}" --tblastn_path "${TBLASTN}" --threads $((THREADS)) --spades_options "--memory $((MEMORY))"
 
@@ -152,6 +156,8 @@ run_unicycler() {
         echo "Unicycler failed" >&2
         exit 1
     fi
+
+	module purge
 }
 
 run_blastn() {
