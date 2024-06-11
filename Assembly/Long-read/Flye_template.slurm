@@ -23,7 +23,7 @@
 # 3. Summarize results with Blobtools
 #
 # Expected Inputs:
-# - Pacbio or Oxford Nanopore long read
+# - Pacbio or Oxford Nanopore long read    # You need to adjust the Flye option based on the read type
 #
 # Required Softwares:
 # - Flye
@@ -95,6 +95,7 @@ run_flye() {
 
 	conda activate "${FLYE_CONDA}"
 
+	# Adjust the read option based on your data
 	flye --nano-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
 
     if [ $? -ne 0 ]; then
