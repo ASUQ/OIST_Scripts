@@ -108,6 +108,11 @@ run_megahit() {
 
 	conda activate "${MEGAHIT_CONDA}"
 
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate megahit conda environment" >&2
+        exit 1
+    fi
+
 	megahit -1 "${read_f}" -2 "${read_r}" -o "${RUN_DIR}/Megahit" --out-prefix "${SAMPLE}_Megahit" \
 		--no-mercy --num-cpu-threads $((THREADS)) --memory 1.0
 
@@ -176,6 +181,11 @@ run_blobtools() {
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"
+
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate blobtools conda environment" >&2
+        exit 1
+    fi
 
     ${BLOBTOOLS} create -i "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" -b "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
 		-t "${RUN_DIR}/Megahit/contigs_vs_nt.blast" -o "${RUN_DIR}/Megahit/blobtools" --db "${BLOBTOOLS_DB}"

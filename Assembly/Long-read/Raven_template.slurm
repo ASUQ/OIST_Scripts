@@ -106,6 +106,11 @@ run_raven() {
 
 	conda activate "${RAVEN_CONDA}"
 
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate raven conda environment" >&2
+        exit 1
+    fi
+
 	raven --threads $((THREADS)) --graphical-fragment-assembly "${RUN_DIR}/assembly.gfa" "${long_read}" > "${RUN_DIR}/assembly.fasta"
 
     if [ $? -ne 0 ]; then
@@ -170,6 +175,11 @@ run_blobtools() {
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"
+
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate blobtools conda environment" >&2
+        exit 1
+    fi
 
     ${BLOBTOOLS} create -i "${RUN_DIR}/assembly.fasta" -b "${RUN_DIR}/minimap2/${SAMPLE}_Raven.sorted.bam" \
 		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"

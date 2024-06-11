@@ -128,6 +128,11 @@ run_blobtools() {
 
     conda activate "${BLOBTOOLS_CONDA}"
 
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate blobtools conda environment" >&2
+        exit 1
+    fi
+
     ${BLOBTOOLS} create -i "${RUN_DIR}/scaffolds.fasta" -y spades -t "${RUN_DIR}/scaffolds_vs_nt.blast" \
 		-o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
 

@@ -96,6 +96,11 @@ run_flye() {
 
 	conda activate "${FLYE_CONDA}"
 
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate Flye conda environment" >&2
+        exit 1
+    fi
+
 	# Adjust the read option based on your data
 	# For metagenome assembly, add --meta option in flye
 	flye --nano-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
@@ -129,6 +134,11 @@ run_blobtools() {
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"
+
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate blobtools conda environment" >&2
+        exit 1
+    fi
 
     ${BLOBTOOLS} create -i "${RUN_DIR}/assembly.fasta" -c "${RUN_DIR}/assembly_info.txt" \
 		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"

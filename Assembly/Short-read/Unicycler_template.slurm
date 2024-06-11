@@ -212,6 +212,11 @@ run_blobtools() {
 
     conda activate "${BLOBTOOLS_CONDA}"
 
+	if [ $? -ne 0 ]; then
+        echo "Failed to activate blobtools conda environment" >&2
+        exit 1
+    fi
+
     ${BLOBTOOLS} create -i "${RUN_DIR}/${SAMPLE}_Unicycler.contigs.fasta" -b "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sorted.bam" \
 		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
 
