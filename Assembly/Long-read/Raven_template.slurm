@@ -144,6 +144,9 @@ run_minimap2() {
 	mkdir -p minimap2
 
 	# Adjust the read option based on your data
+	# - map-pb/map-ont - PacBio CLR/Nanopore vs reference mapping
+	# - map-hifi - PacBio HiFi reads vs reference mapping
+
 	${MINIMAP2} -a -x map-ont -t $((THREADS)) "${RUN_DIR}/assembly.fasta" "${long_read}" > "${RUN_DIR}/minimap2/${SAMPLE}_Raven.sam"
 
     if [ $? -ne 0 ]; then

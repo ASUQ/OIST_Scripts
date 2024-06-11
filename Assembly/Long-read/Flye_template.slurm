@@ -102,7 +102,15 @@ run_flye() {
     fi
 
 	# Adjust the read option based on your data
+	#   --pacbio-raw:  PacBio regular CLR reads (<20% error)
+	#   --pacbio-corr: PacBio reads that were corrected with other methods (<3% error)
+	#   --pacbio-hifi: PacBio HiFi reads (<1% error)
+	#   --nano-raw:    ONT regular reads, pre-Guppy5 (<20% error)
+	#   --nano-corr:   ONT reads that were corrected with other methods (<3% error)
+	#   --nano-hq:     ONT high-quality reads: Guppy5+ SUP or Q20 (<5% error)
+
 	# For metagenome assembly, add --meta option in flye
+
 	flye --nano-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
 
     if [ $? -ne 0 ]; then
