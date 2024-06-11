@@ -34,6 +34,7 @@
 # Usage:
 # - The paths of inputs and softwares, and parameters are hardcoded.
 # - Make sure to update the script with the correct paths and input filenames before execution.
+# - For metagenome assembly, add --meta option in flye
 
 #===============================================================================================#
 
@@ -96,6 +97,7 @@ run_flye() {
 	conda activate "${FLYE_CONDA}"
 
 	# Adjust the read option based on your data
+	# For metagenome assembly, add --meta option in flye
 	flye --nano-raw "${long_read}" --out-dir "${RUN_DIR}" --threads $((THREADS))
 
     if [ $? -ne 0 ]; then

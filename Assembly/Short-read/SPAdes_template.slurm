@@ -34,6 +34,7 @@
 # Usage:
 # - The paths of inputs and softwares, and parameters are hardcoded.
 # - Make sure to update the script with the correct paths and input filenames before execution.
+# - For metagenome assembly, add --meta option and remove --careful option in SPAdes
 
 #===============================================================================================#
 
@@ -94,6 +95,8 @@ run_spades() {
     echo '-----------------------------------------------'
 	echo 'Running SPAdes'
 	echo '-----------------------------------------------'
+
+	# For metagenome assembly, add --meta option and remove --careful option in SPAdes
     ${SPADES} -o "${RUN_DIR}" -1 "${read_f}" -2 "${read_r}" \
 		-k 21,33,55,77,99,119,127 --careful --threads $((THREADS)) --memory $((MEMORY))
 
