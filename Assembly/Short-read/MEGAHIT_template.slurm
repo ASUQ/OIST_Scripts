@@ -124,7 +124,7 @@ run_blastn() {
 	echo 'Running megablast'
 	echo '-----------------------------------------------'
 
-    ${BLASTN} -task megablast -query "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" \
+    ${BLASTN} -task megablast -query "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" \
 		-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
 		-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/Megahit/contigs_vs_nt.blast"
 
@@ -141,7 +141,7 @@ run_bowtie2() {
 
 	mkdir -p Megahit/bowtie2
 
-	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit"
+	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit"
 	${BOWTIE2} -q --reorder --threads $((THREADS)) --time --met-stderr --met 10 \
 		-x "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit" -1 "${read_f}" -2 "${read_r}" > "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit".sam
 
@@ -177,7 +177,7 @@ run_blobtools() {
 
     conda activate "${BLOBTOOLS_CONDA}"
 
-    ${BLOBTOOLS} create -i "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" -b "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
+    ${BLOBTOOLS} create -i "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" -b "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
 		-t "${RUN_DIR}/Megahit/contigs_vs_nt.blast" -o "${RUN_DIR}/Megahit/blobtools" --db "${BLOBTOOLS_DB}"
 
     ${BLOBTOOLS} plot -i "${RUN_DIR}/Megahit/blobtools.blobDB.json" -r superkingdom -o "${RUN_DIR}/Megahit/"
