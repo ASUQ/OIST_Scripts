@@ -124,9 +124,9 @@ run_blastn() {
 	echo 'Running megablast'
 	echo '-----------------------------------------------'
 
-    ${BLASTN} -task megablast -query "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" \
-	-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
-	-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/contigs_vs_nt.blast"
+    ${BLASTN} -task megablast -query "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" \
+		-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
+		-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/Megahit/contigs_vs_nt.blast"
 
     if [ $? -ne 0 ]; then
         echo "megablast failed" >&2
@@ -139,18 +139,18 @@ run_bowtie2() {
 	echo 'Running bowtie2'
 	echo '-----------------------------------------------'
 
-	mkdir -p bowtie2
+	mkdir -p Megahit/bowtie2
 
-	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit"
+	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit"
 	${BOWTIE2} -q --reorder --threads $((THREADS)) --time --met-stderr --met 10 \
-		-x "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit" -1 "${read_f}" -2 "${read_r}" > "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit".sam
+		-x "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit" -1 "${read_f}" -2 "${read_r}" > "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit".sam
 
     if [ $? -ne 0 ]; then
         echo "bowtie2 failed" >&2
         exit 1
     fi
 
-	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.*.bt2"
+	rm -f "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.*.bt2"
 }
 
 run_samtools() {
@@ -158,11 +158,11 @@ run_samtools() {
 	echo 'Running samtools'
 	echo '-----------------------------------------------'
 
-	${SAMTOOLS} sort --output-fmt BAM -=threads $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sam" -o "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam"
+	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sam" -o "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam"
 
-	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sam"
+	rm -f "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sam"
 
-	${SAMTOOLS} index -b -@ $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam"
+	${SAMTOOLS} index -b -@ $((THREADS-1)) "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam"
 
 	if [ $? -ne 0 ]; then
         echo "samtools failed" >&2
@@ -177,22 +177,22 @@ run_blobtools() {
 
     conda activate "${BLOBTOOLS_CONDA}"
 
-    ${BLOBTOOLS} create -i "${RUN_DIR}/${SAMPLE}_Megahit.contigs.fasta" -b "${RUN_DIR}/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
-		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
+    ${BLOBTOOLS} create -i "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fasta" -b "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam" \
+		-t "${RUN_DIR}/Megahit/contigs_vs_nt.blast" -o "${RUN_DIR}/Megahit/blobtools" --db "${BLOBTOOLS_DB}"
 
-    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r superkingdom -o "${RUN_DIR}/"
-    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r phylum -o "${RUN_DIR}/"
-    ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r order -o "${RUN_DIR}/"
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/Megahit/blobtools.blobDB.json" -r superkingdom -o "${RUN_DIR}/Megahit/"
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/Megahit/blobtools.blobDB.json" -r phylum -o "${RUN_DIR}/Megahit/"
+    ${BLOBTOOLS} plot -i "${RUN_DIR}/Megahit/blobtools.blobDB.json" -r order -o "${RUN_DIR}/Megahit/"
 
 
-    ${BLOBTOOLS} view -i "${RUN_DIR}/blobtools.blobDB.json" -r all -o "${RUN_DIR}/"
+    ${BLOBTOOLS} view -i "${RUN_DIR}/Megahit/blobtools.blobDB.json" -r all -o "${RUN_DIR}/Megahit/"
 
 	# Remove comments and extract data from blobtools view output
-	echo 'name,length,GC,N,coverage,superkingdom,phylum,order,family,genus,species' > "${RUN_DIR}/blobtools.blobDB.table.csv"
-	grep -v '^##' "${RUN_DIR}/blobtools.blobDB.table.txt" | \
+	echo 'name,length,GC,N,coverage,superkingdom,phylum,order,family,genus,species' > "${RUN_DIR}/Megahit/blobtools.blobDB.table.csv"
+	grep -v '^##' "${RUN_DIR}/Megahit/blobtools.blobDB.table.txt" | \
 		grep -v '^#' |
 		cut --complement -f7,8,10,11,13,14,16,17,19,20,22,23 |
-		tr -s '\t' ',' >> "${RUN_DIR}/blobtools.blobDB.table.csv"
+		tr -s '\t' ',' >> "${RUN_DIR}/Megahit/blobtools.blobDB.table.csv"
 
 	conda deactivate
 }
