@@ -160,8 +160,8 @@ run_blastn() {
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/assembly.fasta" \
-	-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
-	-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/assembly_vs_nt.blast"
+		-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
+		-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/assembly_vs_nt.blast"
 
     if [ $? -ne 0 ]; then
         echo "megablast failed" >&2
@@ -193,7 +193,7 @@ run_samtools() {
 	echo 'Running samtools'
 	echo '-----------------------------------------------'
 
-	${SAMTOOLS} sort --output-fmt BAM -=threads $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sam" -o "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sorted.bam"
+	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sam" -o "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sorted.bam"
 
 	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sam"
 
