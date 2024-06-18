@@ -95,6 +95,8 @@ set_software_paths() {
 
 	# samtools
 	SAMTOOLS="${SAMTOOLS}/samtools"
+
+	return 0
 }
 
 activate_conda() {
@@ -103,6 +105,8 @@ activate_conda() {
         echo "conda could not be found"
         exit 1
     fi
+
+	return 0
 }
 
 run_minimap2_overlap() {
@@ -119,6 +123,8 @@ run_minimap2_overlap() {
         echo "minimap2 overlap failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_miniasm() {
@@ -148,6 +154,8 @@ run_miniasm() {
     fi
 
 	conda deactivate
+
+	return 0
 }
 
 run_blastn() {
@@ -163,6 +171,8 @@ run_blastn() {
         echo "megablast failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_minimap2() {
@@ -182,6 +192,8 @@ run_minimap2() {
         echo "minimap2 failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_samtools() {
@@ -199,6 +211,8 @@ run_samtools() {
         echo "samtools failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_blobtools() {
@@ -231,6 +245,8 @@ run_blobtools() {
 		tr -s '\t' ',' >> "${RUN_DIR}/blobtools.blobDB.table.csv"
 
 	conda deactivate
+
+	return 0
 }
 
 main() {
@@ -263,6 +279,8 @@ main() {
     run_blobtools
 
     echo 'JOB COMPLETED'
+
+	return 0
 }
 
 

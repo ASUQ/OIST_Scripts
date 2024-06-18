@@ -116,6 +116,8 @@ set_software_paths() {
 
 	# unicycler
 	UNICYCLER="${UNICYCLER}/unicycler-runner.py"
+
+	return 0
 }
 
 activate_conda() {
@@ -124,6 +126,8 @@ activate_conda() {
         echo "conda could not be found"
         exit 1
     fi
+
+	return 0
 }
 
 run_bowtie2_extract_reads() {
@@ -150,6 +154,8 @@ run_bowtie2_extract_reads() {
 
 	read_ex_f="${RUN_DIR}/extracted_reads/short_reads/${SAMPLE}_reads.1.fastq.gz"
 	read_ex_r="${RUN_DIR}/extracted_reads/short_reads/${SAMPLE}_reads.2.fastq.gz"
+
+	return 0
 }
 
 run_minimap2_extract_reads() {
@@ -188,6 +194,8 @@ run_minimap2_extract_reads() {
 	rm -f "${RUN_DIR}/extracted_reads/long_reads/${SAMPLE}_reads.sorted.bam"
 
 	long_ex_read="${RUN_DIR}/extracted_reads/long_reads/${SAMPLE}_reads.fastq.gz"
+
+	return 0
 }
 
 run_unicycler() {
@@ -208,6 +216,8 @@ run_unicycler() {
     fi
 
 	module purge
+
+	return 0
 }
 
 run_blastn() {
@@ -223,6 +233,8 @@ run_blastn() {
         echo "megablast failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_bowtie2() {
@@ -242,6 +254,8 @@ run_bowtie2() {
     fi
 
 	rm -f "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.*.bt2"
+
+	return 0
 }
 
 run_samtools() {
@@ -259,6 +273,8 @@ run_samtools() {
         echo "samtools failed" >&2
         exit 1
     fi
+
+	return 0
 }
 
 run_blobtools() {
@@ -291,6 +307,8 @@ run_blobtools() {
 		tr -s '\t' ',' >> "${RUN_DIR}/blobtools.blobDB.table.csv"
 
 	conda deactivate
+
+	return 0
 }
 
 main() {
@@ -326,6 +344,8 @@ main() {
     run_blobtools
 
     echo 'JOB COMPLETED'
+
+	return 0
 }
 
 
