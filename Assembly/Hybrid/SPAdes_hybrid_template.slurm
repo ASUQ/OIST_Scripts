@@ -53,7 +53,7 @@ BLOBTOOLS_CONDA='Path to blobtools conda environment'
 # Software paths
 BLAST='<BLAST+ directory>'
 BLOBTOOLS='<Blobtools directory>'
-SPADES='<SPAdes directory>/'		# Version 4 is recommended
+SPADES='<SPAdes directory>'		# Version 4 is recommended
 
 # Database paths
 BLOBTOOLS_DB='Path to blobtools nodesDB'
