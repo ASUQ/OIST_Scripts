@@ -250,7 +250,7 @@ run_blobtools() {
 }
 
 main() {
-    #＃ Add conda to your PATH
+    ## Add conda to your PATH
 	activate_conda
 
 	## Create running directory if doesn't exist
