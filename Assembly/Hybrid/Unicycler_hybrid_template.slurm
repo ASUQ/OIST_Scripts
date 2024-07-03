@@ -290,7 +290,7 @@ run_blobtools() {
     fi
 
     ${BLOBTOOLS} create -i "${RUN_DIR}/${SAMPLE}_Unicycler.contigs.fasta" -b "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sorted.bam" \
-		-t "${RUN_DIR}/contigs_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
+		-t "${RUN_DIR}/assembly_vs_nt.blast" -o "${RUN_DIR}/blobtools" --db "${BLOBTOOLS_DB}"
 
     ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r superkingdom -o "${RUN_DIR}/"
     ${BLOBTOOLS} plot -i "${RUN_DIR}/blobtools.blobDB.json" -r phylum -o "${RUN_DIR}/"
