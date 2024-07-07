@@ -110,6 +110,7 @@ activate_conda() {
 run_raven() {
     echo '-----------------------------------------------'
 	echo 'Running Raven'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	conda activate "${RAVEN_CONDA}"
@@ -134,6 +135,7 @@ run_raven() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/assembly.fasta" \
@@ -151,6 +153,7 @@ run_blastn() {
 run_minimap2() {
 	echo '-----------------------------------------------'
 	echo 'Running minimap2'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p minimap2
@@ -172,6 +175,7 @@ run_minimap2() {
 run_samtools() {
 	echo '-----------------------------------------------'
 	echo 'Running samtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/minimap2/${SAMPLE}_Raven.sam" -o "${RUN_DIR}/minimap2/${SAMPLE}_Raven.sorted.bam"
@@ -191,6 +195,7 @@ run_samtools() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"

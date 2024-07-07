@@ -100,6 +100,7 @@ activate_conda() {
 run_flye() {
     echo '-----------------------------------------------'
 	echo 'Running Flye'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	conda activate "${FLYE_CONDA}"
@@ -134,6 +135,7 @@ run_flye() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/assembly.fasta" \
@@ -151,6 +153,7 @@ run_blastn() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"

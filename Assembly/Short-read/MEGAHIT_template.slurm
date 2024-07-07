@@ -112,6 +112,7 @@ activate_conda() {
 run_megahit() {
     echo '-----------------------------------------------'
 	echo 'Running MEGAHIT'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	conda activate "${MEGAHIT_CONDA}"
@@ -137,6 +138,7 @@ run_megahit() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" \
@@ -154,6 +156,7 @@ run_blastn() {
 run_bowtie2() {
 	echo '-----------------------------------------------'
 	echo 'Running bowtie2'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p Megahit/bowtie2
@@ -175,6 +178,7 @@ run_bowtie2() {
 run_samtools() {
 	echo '-----------------------------------------------'
 	echo 'Running samtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sam" -o "${RUN_DIR}/Megahit/bowtie2/${SAMPLE}_Megahit.sorted.bam"
@@ -194,6 +198,7 @@ run_samtools() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"

@@ -133,6 +133,7 @@ activate_conda() {
 run_bowtie2_extract_reads() {
 	echo '-----------------------------------------------'
 	echo 'Running bowtie2 to extract reads'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p extracted_reads/short_reads
@@ -161,6 +162,7 @@ run_bowtie2_extract_reads() {
 run_minimap2_extract_reads() {
 	echo '-----------------------------------------------'
 	echo 'Running minimap2 to extract reads'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p extracted_reads/long_reads
@@ -201,6 +203,7 @@ run_minimap2_extract_reads() {
 run_unicycler() {
     echo '-----------------------------------------------'
 	echo 'Running Unicycler'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	# module installation
@@ -223,6 +226,7 @@ run_unicycler() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/assembly.fasta" \
@@ -240,6 +244,7 @@ run_blastn() {
 run_bowtie2() {
 	echo '-----------------------------------------------'
 	echo 'Running bowtie2'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p bowtie2
@@ -261,6 +266,7 @@ run_bowtie2() {
 run_samtools() {
 	echo '-----------------------------------------------'
 	echo 'Running samtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sam" -o "${RUN_DIR}/bowtie2/${SAMPLE}_Unicycler.sorted.bam"
@@ -280,6 +286,7 @@ run_samtools() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"

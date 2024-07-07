@@ -112,6 +112,7 @@ activate_conda() {
 run_minimap2_overlap() {
 	echo '-----------------------------------------------'
 	echo 'Running minimap2 to overlap reads'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	# Adjust the read option based on your data
@@ -130,6 +131,7 @@ run_minimap2_overlap() {
 run_miniasm() {
     echo '-----------------------------------------------'
 	echo 'Running miniasm'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	conda activate "${MINIASM_CONDA}"
@@ -161,6 +163,7 @@ run_miniasm() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/assembly.fasta" \
@@ -178,6 +181,7 @@ run_blastn() {
 run_minimap2() {
 	echo '-----------------------------------------------'
 	echo 'Running minimap2'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	mkdir -p minimap2
@@ -199,6 +203,7 @@ run_minimap2() {
 run_samtools() {
 	echo '-----------------------------------------------'
 	echo 'Running samtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	${SAMTOOLS} sort --output-fmt BAM --threads $((THREADS-1)) "${RUN_DIR}/minimap2/${SAMPLE}_miniasm.sam" -o "${RUN_DIR}/minimap2/${SAMPLE}_miniasm.sorted.bam"
@@ -218,6 +223,7 @@ run_samtools() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"

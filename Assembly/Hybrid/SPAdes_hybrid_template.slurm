@@ -104,6 +104,7 @@ activate_conda() {
 run_spades() {
     echo '-----------------------------------------------'
 	echo 'Running SPAdes'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
 	# module installation
@@ -132,6 +133,7 @@ run_spades() {
 run_blastn() {
 	echo '-----------------------------------------------'
 	echo 'Running megablast'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     ${BLASTN} -task megablast -query "${RUN_DIR}/scaffolds.fasta" \
@@ -149,6 +151,7 @@ run_blastn() {
 run_blobtools() {
 	echo '-----------------------------------------------'
 	echo 'Running blobtools'
+	echo "$(date)"
 	echo '-----------------------------------------------'
 
     conda activate "${BLOBTOOLS_CONDA}"
