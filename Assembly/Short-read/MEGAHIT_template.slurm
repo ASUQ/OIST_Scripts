@@ -141,6 +141,10 @@ run_blastn() {
 	echo "$(date)"
 	echo '-----------------------------------------------'
 
+	# To avoid warnings
+	BLASTDB="$BLAST_NT_DB/.."
+	export BLASTDB
+
     ${BLASTN} -task megablast -query "${RUN_DIR}/Megahit/${SAMPLE}_Megahit.contigs.fa" \
 		-db "${BLAST_NT_DB}" -outfmt '6 qseqid staxids bitscore std sscinames sskingdoms stitle' \
 		-culling_limit 5 -num_threads $((THREADS)) -evalue 1e-25 -max_target_seqs 5 > "${RUN_DIR}/Megahit/contigs_vs_nt.blast"
