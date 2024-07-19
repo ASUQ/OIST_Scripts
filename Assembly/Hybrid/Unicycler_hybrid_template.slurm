@@ -36,6 +36,7 @@
 # - bowtie2
 # - minimap2
 # - Samtools
+# - Racon
 # - Blobtools v1
 # Note: Miniconda needs to be installed.
 #
@@ -216,7 +217,7 @@ run_unicycler() {
 
 	${UNICYCLER} --short1 "${read_ex_f}" --short2 "${read_ex_r}" --long "${long_ex_read}" --out "${RUN_DIR}" \
 		--spades_path "${SPADES}" --makeblastdb_path "${MAKEBLASTDB}" --tblastn_path "${TBLASTN}" --racon_path "${RACON}" \
-		--threads $((THREADS)) \--spades_options "--memory $((MEMORY))"
+		--threads $((THREADS)) --spades_options "--memory $((MEMORY))"
 
     if [ $? -ne 0 ]; then
         echo "Unicycler failed" >&2
