@@ -29,7 +29,7 @@
 #
 # Required Softwares:
 # - Unicycler
-# - SPADES
+# - SPADES v3 (v4 is not compatible yet)
 # - Standalone BLAST
 # - bowtie2
 # - Samtools
@@ -133,7 +133,7 @@ run_bowtie2_extract_reads() {
 	${BOWTIE2_INDEX} -f -q --threads $((THREADS)) "${reference}" "${RUN_DIR}/extracted_reads/${SAMPLE}_reads"
 	${BOWTIE2} -q --reorder --threads $((THREADS)) --time --met-stderr --met 10 \
 		-x "${RUN_DIR}/extracted_reads/${SAMPLE}_reads" -1 "${read_f}" -2 "${read_r}" \
-		--al-conc-gz "${RUN_DIR}/extracted_reads/${SAMPLE}_reads.aligned.fastq.gz" > /dev/null
+		--al-conc-gz "${RUN_DIR}/extracted_reads/${SAMPLE}_reads.fastq.gz" > /dev/null
 
     if [ $? -ne 0 ]; then
         echo "bowtie2 failed" >&2
@@ -158,8 +158,8 @@ run_unicycler() {
 	echo '-----------------------------------------------'
 
 	# module installation
-	module purge
-	module load python/3.11.4	# Default python version on Deigo is v3.6.8, v3.8+ is needed for SPAdes v4.0+
+	# module purge
+	# module load python/3.11.4	# Default python version on Deigo is v3.6.8, v3.8+ is needed for SPAdes v4.0+
 
 	${UNICYCLER} --short1 "${read_ex_f}" --short2 "${read_ex_r}" --out "${RUN_DIR}" \
 		--spades_path "${SPADES}" --makeblastdb_path "${MAKEBLASTDB}" --tblastn_path "${TBLASTN}" --threads $((THREADS)) --spades_options "--memory $((MEMORY))"
