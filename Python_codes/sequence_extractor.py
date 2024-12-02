@@ -22,6 +22,56 @@ Author: Akito Shima (ASUQ)
 Email: akito-shima@oist.jp
 """
 
+def parse_arguments():
+    """
+    Parse command-line arguments.
+    """
+
+    import argparse
+
+    # Command input using argparse
+    parser = argparse.ArgumentParser(
+        description= \
+        "Extract records from a FASTA file based on a list of sequence IDs" + '\n' \
+        + '\n' \
+        + "Example:" + '\n' \
+        + '\t' + "sequence_extractor.py -i ids.txt -f sequences.fasta -o ./output -p extracted",
+        epilog="Required package: Biopython",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+	)
+
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    required.add_argument(
+        "-i", "--input",
+        type=str,
+        required=True,
+        help="List of sequences you want (string)"
+    )
+
+    required.add_argument(
+        "-f", "--fasta",
+        type=str,
+        required=True,
+        help="Fasta file of sequences (string)"
+    )
+
+    optional.add_argument(
+        "-o", "--out",
+        type=str,
+        default='./',
+        help="Output directory path  [default: ./]"
+    )
+
+    optional.add_argument(
+        "-p", "--prefix",
+        type=str,
+        help="Prefix for output file  [default: input file name]"
+    )
+
+    return parser.parse_args()
+
 def check_required_packages(packages):
     """
     Check if the required packages are installed.
@@ -72,54 +122,19 @@ def find_duplicates(seq_list):
 
 
 def main():
+    # Parse arguments
+    args = parse_arguments()
+
 	# Check the installed packages
     required_packages = ["Bio"]
     check_required_packages(required_packages)
 
 	# Package import
-    import argparse
     from Bio import SeqIO
     import os.path
     import sys
 
-    # Command input using argparse
-    parser = argparse.ArgumentParser(
-        description="Extract records from a FASTA file based on a list of record_id.",
-        epilog="required package: Biopython"
-	)
-
-    required = parser.add_argument_group('required arguments')
-    optional = parser.add_argument_group('optional arguments')
-
-    required.add_argument(
-        "-i", "--input",
-        type=str,
-        required=True,
-        help="List of sequences you want (string)"
-    )
-
-    required.add_argument(
-        "-f", "--fasta",
-        type=str,
-        required=True,
-        help="Fasta file of sequences (string)"
-    )
-
-    optional.add_argument(
-        "-o", "--out",
-        type=str,
-        default='./',
-        help="Output directory path  [default: ./]"
-    )
-
-    optional.add_argument(
-        "-p", "--prefix",
-        type=str,
-        help="Prefix for output file  [default: input file name]"
-    )
-
-    # Parse the inputs from command-line
-    args = parser.parse_args()
+    # Extract argument values
     nodes = args.input
     sequences = args.fasta
     output_dir = os.path.abspath(args.out)
