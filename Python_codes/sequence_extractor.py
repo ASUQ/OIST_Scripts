@@ -36,8 +36,6 @@ def check_required_packages(packages):
 
     if missing_packages:
         print(f"Error: The following required packages are missing: {', '.join(missing_packages)}")
-        print("Please install them using the following command:")
-        print(f"    conda install -c conda-forge {' '.join(missing_packages)}")
         sys.exit(1)
 
 def validate_file(file_path, valid_extensions):
@@ -52,7 +50,6 @@ def validate_file(file_path, valid_extensions):
     root, ext = os.path.splitext(file_path)
     if ext.lower() not in valid_extensions:
         raise ValueError(f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}")
-
 
 def find_duplicates(seq_list):
     """
