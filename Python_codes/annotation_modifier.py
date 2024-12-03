@@ -220,9 +220,9 @@ def main():
     import sys
 
     # Extract argument values
-    gff_file = args.gff
-    scaffolds = args.scaffolds
-    output_dir = args.out
+    gff_file = os.path.abspath(args.gff)
+    scaffolds = os.path.abspath(args.scaffolds)
+    output_dir = os.path.abspath(args.out)
     prefix = args.prefix
 
 	# Check file existence and extension

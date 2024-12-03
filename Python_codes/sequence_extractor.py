@@ -135,8 +135,8 @@ def main():
     import sys
 
     # Extract argument values
-    nodes = args.input
-    sequences = args.fasta
+    nodes = os.path.abspath(args.input)
+    sequences = os.path.abspath(args.fasta)
     output_dir = os.path.abspath(args.out)
     prefix = args.prefix
 

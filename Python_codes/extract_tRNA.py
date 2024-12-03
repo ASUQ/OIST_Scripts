@@ -139,8 +139,8 @@ def main():
     import sys
 
 	# Extract argument values
-    logfile_path = args.input
-    output_dir = args.out
+    logfile_path = os.path.abspath(args.input)
+    output_dir = os.path.abspath(args.out)
     prefix = args.prefix
 
 	# Check file existence and extension
