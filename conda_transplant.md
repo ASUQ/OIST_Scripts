@@ -17,7 +17,7 @@ $ conda env export -n [environment_name] --no-build > [enviornment_name].yml
 ```
 $ conda activavte
 $ conda init --reverse --all	# Remove init script
-$ conda clean --all				# Remove tarballs and caches
+$ conda clean --all		# Remove tarballs and caches
 ```
 
 #### 1-2. Remove miniconda (or anaconda) directory
