@@ -132,7 +132,7 @@ def main():
     prefix = args.prefix
 
 	# Check file existence and extension
-    validate_file(input_path, ['.fasta', '.fas', '.fa', '.faa', '.mpfa'])
+    validate_file(input_path, ['.fasta', '.fas', '.fa', '.fna', '.mpfa'])
 
     # Make new directory if directory does not exist
     if not os.path.isdir(output_dir):
