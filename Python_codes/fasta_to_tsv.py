@@ -110,7 +110,7 @@ def fasta_to_tsv(input_path, output_path):
     with open(output_path, 'w') as output_handle:
         output_handle.write(f'#name\tlength\tcoverage\n')
         for record in record_list:
-            output_handle.write(f"{record.id}\t{len(record.seq)}\t1\n")
+            output_handle.write(f"{record[0]}\t{record[1]}\t{record[2]}\n")
 
 
 def main():
