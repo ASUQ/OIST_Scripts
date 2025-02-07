@@ -120,7 +120,6 @@ def find_duplicates(seq_list):
             seen.add(seq_id)
     return duplicates
 
-
 def main():
     # Parse arguments
     args = parse_arguments()
@@ -179,22 +178,16 @@ def main():
             print("Input file is empty. Please provide a file with sequence IDs.")
             sys.exit(1)
 
+    # Load the Fasta file into a dictionary to preserve order based on the input list
+    fasta_dict = SeqIO.to_dict(SeqIO.parse(open(sequences), 'fasta'))
 
     # Extract sequences of the targets and save as fasta file
-    output_handle = None
     found_ids = set()
-    with open(sequences, 'r') as f:
-        for record in SeqIO.parse(f, 'fasta'):
-            if record.id in names:
-                if not output_handle:
-                    output_handle = open(output_file_path, 'w')
-
-                SeqIO.write(record, output_handle, 'fasta')
-                found_ids.add(record.id)
-
-        if output_handle:
-            output_handle.close()
-
+    with open(output_file_path, 'w') as output_handle:
+        for seq_id in names:
+            if seq_id in fasta_dict:
+                SeqIO.write(fasta_dict[seq_id], output_handle, 'fasta')
+                found_ids.add(seq_id)
 
     unmatched_ids = [name for name in names if name not in found_ids]
     if unmatched_ids:
