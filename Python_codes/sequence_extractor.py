@@ -142,7 +142,7 @@ def main():
 
 	# Check file existence and extension
     validate_file(nodes, ['.txt'])
-    validate_file(sequences, ['.fasta', '.fas', '.fa', '.fna'])
+    validate_file(sequences, ['.fasta', '.fas', '.fa', '.fna', '.faa', '.aa'])
 
     # Make new directory if directory does not exist
     if not os.path.isdir(output_dir):
