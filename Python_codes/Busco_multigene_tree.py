@@ -6,7 +6,7 @@ Usage:
     Busco_multigene_tree.py \
         -i <INPUT_DIR> -f <FRACTION> [-c <CORES>] \
         [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-a <AMAS_OPTION>] [-q <IQTREE_OPTION>] \
-        [-o <OUT_DIR>] [-p <PREFIX>] [-h|--help]
+        [-o <OUT_DIR>] [-h|--help]
 
 Purpose:
     Create multi-gene phylogenomic tree from BUSCO single-copy orthologs.
@@ -16,12 +16,11 @@ Options:
     -i, --input_dir             Path to the input directory which contains all BUSCO outputs
     -f, --fraction              Comma-spliced fractions for creating mulit-gene phylogenetic tree
     -c, --cores                 Number of CPUs to execute [default: 8]
-    -m, --mafft                 Command option for mafft [default: mafft --globalpair --maxiterate 1000 --thread $CORES]
-    -t, --trimal                Command option for trimAl
-    -a, --amas                  Command option for AMAS
-    -q, --iqtree                Command option for IQ-TREE
-    -o, --out_dir               Output directory path [default: ./]
-    -p, --prefix                Prefix for output file name [default: multi-gene]
+    -m, --mafft                 mafft options [default: --globalpair --maxiterate 1000 --thread $CORES]
+    -t, --trimal                trimAl options
+    -a, --amas                  AMAS options
+    -q, --iqtree                IQ-TREE options
+    -o, --out_dir               Output directory path [default: current directory]
 
 Required Packages and Softwares:
     Biopython, mafft, trimAl, AMAS, IQ-TREE
@@ -113,7 +112,7 @@ def parse_arguments() -> argparse.Namespace:
         "--iqtree",
         nargs="+",
         metavar="IQTREE_OPTION",
-        default=[""],
+        default=["-B", "1000", "-alrt", "1000", "-T", "$CORES"],
         help="Command option for IQ-TREE [default: ]",
     )
 
@@ -125,36 +124,13 @@ def parse_arguments() -> argparse.Namespace:
         help="Output directory path  [default: ./]",
     )
 
-    optional.add_argument(
-        "-p",
-        "--prefix",
-        type=str,
-        default="multi-gene",
-        help="Prefix for output file name [default: multi-gene]",
-    )
-
     return parser.parse_args()
 
 
-# def validate_file(file_path: Path, valid_extensions: set) -> None:
-#     """Validates the existence and extension of a file."""
-
-#     if not file_path.exists():
-#         raise FileNotFoundError(f"File '{file_path}' does not exist.")
-
-#     if not file_path.is_file():
-#         raise FileNotFoundError(f"'{file_path}' is not a file.")
-
-#     if file_path.suffix.lower() not in valid_extensions:
-#         raise ValueError(
-#             f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}"
-#         )
-
-
-def run_cmd(cmd: list[str]) -> None:
+def run_cmd(cmd: list[str], stdout=None) -> None:
     """Execute a subprocess call, abort on failure"""
     try:
-        subprocess.check_call(cmd)
+        subprocess.check_call(cmd, stdout=stdout)
     except subprocess.CalledProcessError as e:
         logging.fatal(f"Error: command failed: {' '.join(cmd)}")
         sys.exit(e.returncode)
@@ -177,11 +153,10 @@ def collect_gene_seqs(
             continue
 
         ###
-        # Need to adjust the script to collect sample ID (e.g. Genbank)
-        # Maybe go upstream from the busco directory
+        # Extract sample name
+        # assuming structure: /input_dir/subdirectories/sample/busco_output/run_lineage/single_copy_busco_sequences/*.faa
         ###
-        # Organism name is the firt subdirectory under input_dir
-        org_name = seq_dir.relative_to(input_dir).parts[0]
+        org_name = seq_dir.relative_to(input_dir).parts[-4]
         org_set.add(org_name)
 
         for faa_file in seq_dir.glob("*.faa"):
@@ -225,7 +200,7 @@ def write_gene_lists(fract_dict: dict, output_dir: Path) -> None:
     """Write out which genes are analyzed per fraction."""
 
     for frac, genes in fract_dict.items():
-        file_path = output_dir / f"fraction{frac}_analyzed_genes.txt"
+        file_path = output_dir / f"frac{int(frac * 100)}%_analyzed_genes.txt"
         with file_path.open("w") as out:
             out.write(f"Number of genes considered: {len(genes)}\n")
             out.write("Analyzed genes:\n")
@@ -235,16 +210,16 @@ def write_gene_lists(fract_dict: dict, output_dir: Path) -> None:
 def align_and_trim(
     fract_dict: dict[float, list[str]],
     output_dir: Path,
-    mafft_opt: list[str],
-    trimal_opt: list[str],
+    mafft_opts: list[str],
+    trimal_opts: list[str],
 ) -> None:
     """Align and trim all genes in the most inclusive set
 
     Args:
         fract_dict (dict): fraction -> tuple of genes present above the threshold
         output_dir (Path): Path of output directory
-        mafft_opt (tuple): mafft command set
-        trimal_opt (tuple): trimal command set
+        mafft_opts (tuple): mafft command set
+        trimal_opts (tuple): trimal command set
     """
     smallest_frac = min(fract_dict.keys())
     genes = fract_dict[smallest_frac]
@@ -255,12 +230,11 @@ def align_and_trim(
         trimmed = output_dir / f"{gene}_trimmed.faa"
 
         logging.info(f"Running mafft on {infile}")
-        cmd = mafft_opt + [str(infile)]
-        run_cmd(cmd)
+        with aligned.open("w") as out_f:
+            run_cmd(["mafft"] + mafft_opts + [str(infile)], stdout=out_f)
 
         logging.info(f"Running trimAl on {aligned}")
-        cmd = trimal_opt + ["-in", str(aligned), "-out", str(trimmed)]
-        run_cmd(cmd)
+        run_cmd(["trimal"] + trimal_opts + ["-in", str(aligned), "-out", str(trimmed)])
 
 
 def concat_alignments(
@@ -283,16 +257,15 @@ def concat_alignments(
         for org, seqs in concat.items():
             for gene in genes:
                 if gene not in seqs:
-                    seqs[gene] = "_" * len(ref[gene])
+                    seqs[gene] = "-" * len(ref[gene])
 
         # Write concatenated file
-        cafile = output_dir / f"fraction{frac}_concat.faa"
+        cafile = output_dir / f"frac{int(frac * 100)}%_concat.faa"
         records: list[SeqRecord] = []
         for org, seqs in concat.items():
             full = "".join(seqs[gene] for gene in genes)
             records.append(SeqRecord(Seq(full), id=org, description=""))
-        with cafile.open("w") as out:
-            SeqIO.write(records, out, "fasta")
+        SeqIO.write(records, cafile, "fasta")
         cafiles[frac] = cafile
     return cafiles
 
@@ -301,22 +274,27 @@ def run_iqtree(cafiles: dict[float, Path], iqtree_opts: list[str]) -> None:
     """Run IQ-TREE"""
 
     for frac, cafile in cafiles.items():
-        results_dir = cafile.parent / f"fraction{frac}_results"
-        results_dir.mkdir(exist_ok=True)
+        results_dir = cafile.parent / f"frac{int(frac * 100)}%_results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+
         logging.info(f"Running IQ-TREE on {cafile}")
-        iqtree_cmd = iqtree_opts + [
-            "-s",
-            str(cafile),
-            "-pre",
-            str(results_dir / cafile.name),
-        ]
-        run_cmd(iqtree_cmd)
+        run_cmd(
+            ["iqtree"]
+            + iqtree_opts
+            + [
+                "-s",
+                str(cafile),
+                "-pre",
+                str(results_dir / cafile.name),
+            ]
+        )
 
 
 def main() -> None:
-    ## Parse arguments
     args = parse_arguments()
     fractions = tuple(sorted(map(float, args.fraction.split(","))))
+    args.mafft = [str(args.cores) if opt == "$CORES" else opt for opt in args.mafft]
+    args.iqtree = [str(args.cores) if opt == "$CORES" else opt for opt in args.iqtree]
 
     logging.info("Starting process...")
 
