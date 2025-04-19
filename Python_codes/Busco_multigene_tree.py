@@ -3,11 +3,13 @@
 
 """
 Usage:
-    Busco_multigene_tree.py -i <INPUT_DIR> -f <FRACTION> [-c <CORES>]
-        [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-a <AMAS_OPTION>] [-q <IQTREE_OPTION>] [-o <OUT_DIR>] [-p <PREFIX>] [-h|--help]
+    Busco_multigene_tree.py \
+        -i <INPUT_DIR> -f <FRACTION> [-c <CORES>] \
+        [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-a <AMAS_OPTION>] [-q <IQTREE_OPTION>] \
+        [-o <OUT_DIR>] [-p <PREFIX>] [-h|--help]
 
 Purpose:
-    Create multi-gene phylogenomic tree from BUSCO single-copy orthologous genes
+    Create multi-gene phylogenomic tree from BUSCO single-copy orthologs.
 
 Options:
     -h, --help                  Show this
@@ -32,24 +34,22 @@ import argparse
 import logging
 import subprocess
 import sys
-import os
 from collections import defaultdict
 from pathlib import Path
 
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command-line arguments.
-    """
+    """Parse command-line arguments."""
 
-    # Command input using argparse
     parser = argparse.ArgumentParser(
-        description="Create multi-gene phylogenomic tree from BUSCO single-copy orthologous genes.",
+        description="Build multi-gene phylogenomic tree from BUSCO single-copy orthologous gene",
         epilog="Required package and Softwares: Biopython, mafft, trimAl, AMAS, IQ-TREE",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -136,201 +136,187 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def validate_file(file_path: Path, valid_extensions: set) -> None:
-    """
-    Validates the existence and extension of a file.
-    """
+# def validate_file(file_path: Path, valid_extensions: set) -> None:
+#     """Validates the existence and extension of a file."""
 
-    if not file_path.exists():
-        raise FileNotFoundError(f"File '{file_path}' does not exist.")
+#     if not file_path.exists():
+#         raise FileNotFoundError(f"File '{file_path}' does not exist.")
 
-    if not file_path.is_file():
-        raise FileNotFoundError(f"'{file_path}' is not a file.")
+#     if not file_path.is_file():
+#         raise FileNotFoundError(f"'{file_path}' is not a file.")
 
-    if file_path.suffix.lower() not in valid_extensions:
-        raise ValueError(
-            f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}"
-        )
+#     if file_path.suffix.lower() not in valid_extensions:
+#         raise ValueError(
+#             f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}"
+#         )
 
 
-def run_cmd(cmd: tuple) -> int:
-    """Execute a subprocess call, abort on failure
-
-    Args:
-        cmd (tuple): command
-
-    Returns:
-        int: return code
-    """
+def run_cmd(cmd: list[str]) -> None:
+    """Execute a subprocess call, abort on failure"""
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError as e:
-        logging.fatal(f"Error: command failed: {' '.join(cmd)}", file=sys.stderr)
+        logging.fatal(f"Error: command failed: {' '.join(cmd)}")
         sys.exit(e.returncode)
 
 
-def collect_gene_seqs(input_dir: Path, output_dir: Path) -> defaultdict:
+def collect_gene_seqs(
+    input_dir: Path, output_dir: Path
+) -> tuple[dict[str, set[str]], set[str]]:
     """
-    Walk BUSCO outputs, aggregate single-copy faa into per-gene Fasta file.
-    Returns gene_dict (gene -> [orgs]) and org_list
+    Parse single-copy BUSCO FASTAs with SeqIO, prefix record.id with organism name,
+    and append into per-gene files.
     """
 
-    ## Collect sequences by gene
-    gene_dict = defaultdict(set)  # gene_name: {set of orgs that have it}
-    org_set = set()  # all organism names seen
+    # gene_name: {set of orgs that have it}
+    gene_dict: dict[str, set[str]] = defaultdict(set)
+    org_set: set[str] = set()  # all organism names seen
 
-    for root, _, files in os.walk(input_dir):
-        for file in files:
-            if not root.endswith("single_copy_busco_sequences"):
-                continue
+    for seq_dir in input_dir.rglob("single_copy_busco_sequences"):
+        if not seq_dir.is_dir():
+            continue
 
-            ###
-            # Need to adjust the script to collect sample ID (e.g. Genbank)
-            # Maybe go upstream from the busco directory
-            ###
-            # Organism name is the firt subdirectory under input_dir
-            rel = os.path.relpath(root, input_dir)
-            org_name = rel.split(os.sep)[0]
-            if org_name not in org_set:
-                org_set.add(org_name)
+        ###
+        # Need to adjust the script to collect sample ID (e.g. Genbank)
+        # Maybe go upstream from the busco directory
+        ###
+        # Organism name is the firt subdirectory under input_dir
+        org_name = seq_dir.relative_to(input_dir).parts[0]
+        org_set.add(org_name)
 
-            for fname in files:
-                if not fname.endswith(".faa"):
-                    continue
-                gene = fname[:-4]  # strip .faa
-                gene_dict[gene].add(org_name)
-
-                in_path = os.path.join(root, fname)
-                out_path = os.path.join(output_dir, f"{gene}.faa")
-
-                with open(in_path) as inp, open(out_path, "a") as out:
-                    for line in inp:
-                        if line.startswith(">"):
-                            out.write(f">{org_name}\n")
-                        else:
-                            out.write(line)
+        for faa_file in seq_dir.glob("*.faa"):
+            gene = faa_file.stem
+            gene_dict[gene].add(org_name)
+            out_file = output_dir / f"{gene}.faa"
+            with faa_file.open("r") as inp, out_file.open("a") as out:
+                for rec in SeqIO.parse(inp, "fasta"):
+                    rec.id = org_name
+                    rec.description = ""
+                    SeqIO.write(rec, out_file, "fasta")
 
     return gene_dict, org_set
 
 
-def select_shared_genes(gene_dict: dict, org_set: set, fractions: tuple) -> dict:
+def select_shared_genes(
+    gene_dict: dict[str, set[str]], org_set: set[str], fractions: list[float]
+) -> dict[float, list[str]]:
     """For each fraction, return list of genes present above the threshold.
 
     Args:
         gene_dict (dict): gene -> set(orgs)
         org_set (set): set of all organisms
-        fractions (tuple): array of fractions
+        fractions (list): array of fractions
 
     Returns:
         dict: fraction -> tuple of genes present above the threshold
     """
 
     total = len(org_set)
-    fract_dict = {}
+    fract_dict: dict[float, list[str]] = {}
     for frac in fractions:
         threshold = total * frac
-        shared = [gene for gene, orgs in gene_dict.items() if len(orgs) >= threshold]
-        fract_dict[frac] = shared
+        fract_dict[frac] = [
+            gene for gene, orgs in gene_dict.items() if len(orgs) >= threshold
+        ]
     return fract_dict
 
 
 def write_gene_lists(fract_dict: dict, output_dir: Path) -> None:
-    """Write out which genes are analyzed per fraction.
-
-    Args:
-        fract_dict (dict): fraction -> tuple of genes present above the threshold
-        output_dir (Path): Path of output directory
-    """
+    """Write out which genes are analyzed per fraction."""
 
     for frac, genes in fract_dict.items():
-        path = os.path.join(output_dir, f"fraction{frac}_analyzed_genes.txt")
-        with open(path, "w") as out:
+        file_path = output_dir / f"fraction{frac}_analyzed_genes.txt"
+        with file_path.open("w") as out:
             out.write(f"Number of genes considered: {len(genes)}\n")
             out.write("Analyzed genes:\n")
-            out.write("\n".join(genes))
-            out.write("\n")
+            out.write("\n".join(genes) + "\n")
 
 
 def align_and_trim(
-    fract_dict: dict, output_dir: Path, mafft_cmd: tuple, trimal_cmd: tuple
+    fract_dict: dict[float, list[str]],
+    output_dir: Path,
+    mafft_opt: list[str],
+    trimal_opt: list[str],
 ) -> None:
     """Align and trim all genes in the most inclusive set
 
     Args:
         fract_dict (dict): fraction -> tuple of genes present above the threshold
         output_dir (Path): Path of output directory
-        mafft_cmd (tuple): mafft command set
-        trimal_cmd (tuple): trimal command set
+        mafft_opt (tuple): mafft command set
+        trimal_opt (tuple): trimal command set
     """
     smallest_frac = min(fract_dict.keys())
     genes = fract_dict[smallest_frac]
 
-    mafft_tpl = " ".join(mafft_cmd)
-    trimal_tpl = " ".join(trimal_cmd)
-
     for gene in genes:
-        infile = os.path.join(output_dir, f"{gene}.faa")
-        aligned = os.path.join(output_dir, f"{gene}_aligned.faa")
-        trimmed = os.path.join(output_dir, f"{gene}_trimmed.faa")
+        infile = output_dir / f"{gene}.faa"
+        aligned = output_dir / f"{gene}_aligned.faa"
+        trimmed = output_dir / f"{gene}_trimmed.faa"
+
         logging.info(f"Running mafft on {infile}")
-        run_cmd(mafft_tpl.split().copy() + [infile, ">", aligned])
-        logging.info(f"Running trimAl on {infile}")
-        run_cmd(trimal_tpl.split().copy() + ["-in", aligned, "-out", trimmed])
+        cmd = mafft_opt + [str(infile)]
+        run_cmd(cmd)
+
+        logging.info(f"Running trimAl on {aligned}")
+        cmd = trimal_opt + ["-in", str(aligned), "-out", str(trimmed)]
+        run_cmd(cmd)
 
 
-def concat_and_build(fract_dict: dict, output_dir: Path, iqtree_cmd: tuple) -> None:
-    """For each fraction, concatenate trimmed gene alignments and run IQ-TREE
+def concat_alignments(
+    fract_dict: dict[float, list[str]], output_dir: Path
+) -> dict[float, Path]:
+    """For each fraction, concatenate trimmed gene alignments"""
 
-    Args:
-        fract_dict (dict): fraction -> tuple of genes present above the threshold
-        output_dir (Path): Path of output directory
-        iqtree_cmd (tuple): IQ-TREE command set
-    """
-    iq_tpl = " ".join(iqtree_cmd)
-
+    cafiles: dict[float, Path] = {}
     for frac, genes in fract_dict.items():
-        concat = defaultdict(dict)
+        # concat: organism -> gene -> sequence
+        concat: dict[str, dict[str, str]] = defaultdict(lambda: defaultdict(str))
         for gene in genes:
-            path = os.path.join(output_dir, f"{gene}_trimmed.faa")
-            org = None
-            seq = []
-            with open(path) as inp:
-                for line in inp:
-                    if line.startswith(">"):
-                        org = line[1:].strip()
-                    else:
-                        seq.append(line.strip())
-            concat[org][gene] = "".join(seq)
+            trimmed_faa_path = output_dir / f"{gene}_trimmed.faa"
+            for rec in SeqIO.parse(trimmed_faa_path, "fasta"):
+                org = rec.id
+                concat[org][gene] = str(rec.seq)
 
         # pad missing genes
-        for org in concat:
+        ref = next(iter(concat.values()))
+        for org, seqs in concat.items():
             for gene in genes:
-                if gene not in concat[org]:
-                    length = len(next(iter(concat.values()))[gene])
-                    concat[org][gene] = "-" * length
+                if gene not in seqs:
+                    seqs[gene] = "_" * len(ref[gene])
 
         # Write concatenated file
-        cafile = os.path.join(output_dir, f"fraction{frac}_concat.faa")
-        with open(cafile, "w") as out:
-            for org, gdict in concat.items():
-                out.write(f">{org}\n")
-                out.write("".join(gdict[g] for g in genes) + "\n")
+        cafile = output_dir / f"fraction{frac}_concat.faa"
+        records: list[SeqRecord] = []
+        for org, seqs in concat.items():
+            full = "".join(seqs[gene] for gene in genes)
+            records.append(SeqRecord(Seq(full), id=org, description=""))
+        with cafile.open("w") as out:
+            SeqIO.write(records, out, "fasta")
+        cafiles[frac] = cafile
+    return cafiles
 
-        # Lastly, run iqtree on the concatenated file (per given fraction)
+
+def run_iqtree(cafiles: dict[float, Path], iqtree_opts: list[str]) -> None:
+    """Run IQ-TREE"""
+
+    for frac, cafile in cafiles.items():
+        results_dir = cafile.parent / f"fraction{frac}_results"
+        results_dir.mkdir(exist_ok=True)
         logging.info(f"Running IQ-TREE on {cafile}")
-        cmd = iq_tpl.split().copy() + [
+        iqtree_cmd = iqtree_opts + [
             "-s",
-            cafile,
+            str(cafile),
             "-pre",
-            f"fraction{frac}_concat.faa",
+            str(results_dir / cafile.name),
         ]
-        run_cmd(cmd)
+        run_cmd(iqtree_cmd)
 
 
 def main() -> None:
     ## Parse arguments
     args = parse_arguments()
-    fractions = tuple(sorted(list(map(float, args.fraction.split(",")))))
+    fractions = tuple(sorted(map(float, args.fraction.split(","))))
 
     logging.info("Starting process...")
 
@@ -341,7 +327,11 @@ def main() -> None:
     fract_dict = select_shared_genes(gene_dict, org_set, fractions)
     write_gene_lists(fract_dict, args.out_dir)
     align_and_trim(fract_dict, args.out_dir, args.mafft, args.trimal)
-    concat_and_build(fract_dict, args.out_dir, args.iqtree)
+
+    cafiles = concat_alignments(fract_dict, args.out_dir)
+    run_iqtree(cafiles, args.iqtree)
+
+    logging.info("Job completed")
 
 
 if __name__ == "__main__":
