@@ -3,13 +3,17 @@
 
 """
 Usage:
-    Busco_multigene_tree.py \
-        -i <INPUT_DIR> -f <FRACTION> [-c <CORES>] \
-        [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-error <AMAS_OPTION>] [-q <IQTREE_OPTION>] \
-        [-o <OUT_DIR>] [-h|--help]
+    Busco_multigene_tree.py <subcommand> [options]
 
 Purpose:
     Create multi-gene phylogenomic tree from BUSCO single-copy orthologs.
+
+Subcommands:
+    all                         Run all steps: collect, select, align, infer
+    collect                     Collect per-gene FASTA files from BUSCO outputs
+    select                      Select shared genes & write gene lists
+    align                       Align & trim gene alignments (mafft & trimAl)
+    infer                       Concatenate & build tree (AMAS & IQ-TREE)
 
 Options:
     -h, --help                  Show this
@@ -46,105 +50,119 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 SOFTWARES = ["mafft", "trimal", "AMAS.py", "iqtree"]
 
+OPTION_DEFS = {
+    "input_dir": dict(
+        flags=("-i", "--input_dir"),
+        kwargs=dict(type=Path, required=True, help="Path to BUSCO outputs"),
+    ),
+    "out_dir": dict(
+        flags=("-o", "--out_dir"),
+        kwargs=dict(
+            type=Path,
+            default=Path("./output"),
+            help="Output directory [default: ./output]",
+        ),
+    ),
+    "cores": dict(
+        flags=("-c", "--cores"),
+        kwargs=dict(type=int, default=8, help="CPUs to use [default: 8]"),
+    ),
+    "fraction": dict(
+        flags=("-f", "--fraction"),
+        kwargs=dict(
+            type=str, help="Comma-spliced completeness fraction(s) (e.g. '0.5,0.8')"
+        ),
+    ),
+    "mafft": dict(
+        flags=("-m", "--mafft"),
+        kwargs=dict(
+            nargs="+",
+            metavar="MAFFT_OPTION",
+            default=["--globalpair", "--maxiterate", "1000", "--thread", "$CORES"],
+            help="MAFFT options [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]",
+        ),
+    ),
+    "trimal": dict(
+        flags=("-t", "--trimal"),
+        kwargs=dict(
+            nargs="+",
+            metavar="TRIMAL_OPTION",
+            default=["--automated1"],
+            help="trimAl options [default: trimal --automated1 -in $INPUT -out $OUTPUT]",
+        ),
+    ),
+    "amas": dict(
+        flags=("-a", "--amas"),
+        kwargs=dict(
+            nargs="+",
+            metavar="AMAS_OPTION",
+            default=[
+                "concat",
+                "--in-format",
+                "fasta",
+                "--cores",
+                "$CORES",
+                "--data-type",
+                "aa",
+                "--part-format",
+                "nexus",
+            ],
+            help="AMAS options [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]",
+        ),
+    ),
+    "iqtree": dict(
+        flags=("-q", "--iqtree"),
+        kwargs=dict(
+            nargs="+",
+            metavar="IQTREE_OPTION",
+            default=["-B", "1000", "-alrt", "1000", "-T", "$CORES"],
+            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -T $CORES -s $INPUT -p $PARTITION -pre $PREFIX]",
+        ),
+    ),
+}
+
+
+SUBCMD_OPTS = {
+    "collect": ["input_dir", "out_dir"],
+    "select": ["input_dir", "out_dir", "fraction"],
+    "align": ["input_dir", "out_dir", "fraction", "cores", "mafft", "trimal"],
+    "infer": ["input_dir", "out_dir", "fraction", "cores", "amas", "iqtree"],
+    "all": [
+        "input_dir",
+        "out_dir",
+        "fraction",
+        "cores",
+        "mafft",
+        "trimal",
+        "amas",
+        "iqtree",
+    ],
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build multi-gene phylogenomic tree from BUSCO single-copy orthologous gene",
+        epilog="Required package and Softwares: Biopython, mafft, trimAl, AMAS, IQ-TREE",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subs = parser.add_subparsers(dest="command", required=True)
+
+    for cmd, opt_keys in SUBCMD_OPTS.items():
+        p = subs.add_parser(cmd, help=f"{cmd} step")
+        for key in opt_keys:
+            flags = OPTION_DEFS[key]["flags"]
+            kwargs = OPTION_DEFS[key]["kwargs"]
+            p.add_argument(*flags, **kwargs)
+
+    return parser.parse_args()
+
 
 def check_software(tool: str) -> None:
     """Verify that a required software is available in PATH."""
     if shutil.which(tool) is None:
         logging.fatal(f"Required software '{tool}' not found in PATH.")
         sys.exit(1)
-
-
-def parse_arguments() -> argparse.Namespace:
-    """Parse command-line arguments."""
-
-    parser = argparse.ArgumentParser(
-        description="Build multi-gene phylogenomic tree from BUSCO single-copy orthologous gene",
-        epilog="Required package and Softwares: Biopython, mafft, trimAl, AMAS, IQ-TREE",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    required = parser.add_argument_group("required arguments")
-    optional = parser.add_argument_group("optional arguments")
-
-    required.add_argument(
-        "-i",
-        "--input_dir",
-        type=Path,
-        required=True,
-        help="Path to the input directory which contains all BUSCO outputs",
-    )
-
-    required.add_argument(
-        "-f",
-        "--fraction",
-        type=str,
-        required=True,
-        help="Comma-spliced fractions for creating mulit-gene phylogenetic tree.",
-    )
-
-    optional.add_argument(
-        "-c",
-        "--cores",
-        type=int,
-        default=8,
-        help="Number of CPUs to execute [default: 8]",
-    )
-
-    optional.add_argument(
-        "-m",
-        "--mafft",
-        nargs="+",
-        metavar="MAFFT_OPTION",
-        default=["--globalpair", "--maxiterate", "1000", "--thread", "$CORES"],
-        help="Command option for mafft [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]",
-    )
-
-    optional.add_argument(
-        "-t",
-        "--trimal",
-        nargs="+",
-        metavar="TRIMAL_OPTION",
-        default=["--automated1"],
-        help="Command option for trimal [default: trimal --automated1 -in $INPUT -out $OUTPUT]",
-    )
-
-    optional.add_argument(
-        "-a",
-        "--amas",
-        nargs="+",
-        metavar="AMAS_OPTION",
-        default=[
-            "concat",
-            "--in-format",
-            "fasta",
-            "--cores",
-            "$CORES",
-            "--data-type",
-            "aa",
-            "--part-format",
-            "nexus",
-        ],
-        help="Command option for AMAS [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]",
-    )
-
-    optional.add_argument(
-        "-q",
-        "--iqtree",
-        nargs="+",
-        metavar="IQTREE_OPTION",
-        default=["-B", "1000", "-alrt", "1000", "-T", "$CORES"],
-        help="Command option for IQ-TREE [default: iqtree -B 1000 -alrt 1000 -T $CORES -s $INPUT -p $PARTITION -pre $PREFIX]",
-    )
-
-    optional.add_argument(
-        "-o",
-        "--out_dir",
-        type=Path,
-        default=Path("./output"),
-        help="Output directory path  [default: ./output]",
-    )
-
-    return parser.parse_args()
 
 
 def run_cmd(cmd: list[str], stdout=None) -> None:
@@ -154,6 +172,34 @@ def run_cmd(cmd: list[str], stdout=None) -> None:
     except subprocess.CalledProcessError as e:
         logging.fatal(f"Command failed {e.returncode}: {' '.join(cmd)}")
         sys.exit(e.returncode)
+
+
+## Functions for parsing arguments
+def parse_fractions(frac_str: str) -> list[float]:
+    """Parse comma-separated fractions into a sorted list of floats."""
+    fracs = set()
+    for frac in frac_str.split(","):
+        try:
+            frac = float(frac)
+        except ValueError:
+            logging.error("fractions must be comma-spliced numbers")
+            sys.exit(1)
+        if not 0 < frac <= 1:
+            logging.error("fractions must be numbers between 0 and 1")
+            sys.exit(1)
+
+        fracs.add(round(frac, 2))
+
+    return sorted(fracs)
+
+
+def load_genes_for_fraction(frac: float, output_dir: Path) -> list[str]:
+    """Load the list of selected genes for a given fraction from disk."""
+    pct = int(frac * 100)
+    path = output_dir / f"frac{pct}pct_results/frac{pct}pct_genes.txt"
+    with path.open() as f:
+        lines = f.read().splitlines()
+    return lines[2:]  # skip header lines
 
 
 def collect_gene_seqs(
@@ -221,13 +267,14 @@ def select_shared_genes(
 
 
 def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> None:
-    """Dump which genes were used at each completeness threshold."""
+    """Write out which genes pass completeness threshold."""
 
     for frac, genes in frac_dict.items():
-        results_dir = output_dir / f"frac{int(frac * 100)}pct_results"
+        pct = int(frac * 100)
+        results_dir = output_dir / f"frac{pct}pct_results"
         results_dir.mkdir(parents=True, exist_ok=True)
 
-        file_path = results_dir / f"frac{int(frac * 100)}pct_genes.txt"
+        file_path = results_dir / f"frac{pct}pct_genes.txt"
         with file_path.open("w") as out:
             out.write(f"Number of genes considered: {len(genes)}\n")
             out.write("Analyzed genes:\n")
@@ -246,12 +293,14 @@ def align_and_trim(
     raw_dir = seq_dir / "raw"
     aligned_dir = seq_dir / "aligned"
     trimmed_dir = seq_dir / "trimmed"
+    aligned_dir.mkdir(parents=True, exist_ok=True)
+    trimmed_dir.mkdir(parents=True, exist_ok=True)
 
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
 
     logging.info("Aligning the genes")
-    for gene in tqdm(genes):
+    for gene in tqdm(genes, desc="Align & trim"):
         infile = raw_dir / f"{gene}.faa"
         aligned = aligned_dir / f"{gene}_aligned.faa"
         trimmed = trimmed_dir / f"{gene}_trimmed.faa"
@@ -275,7 +324,8 @@ def concat_alignments(
             logging.warning(f"No genes for fraction {frac}, skipping...")
             continue
 
-        results_dir = output_dir / f"frac{int(frac*100)}pct_results"
+        pct = int(frac * 100)
+        results_dir = output_dir / f"frac{pct}pct_results"
         concat_faa = results_dir / "concat.faa"
         partition_file = results_dir / "partitions.nex"
 
@@ -284,7 +334,6 @@ def concat_alignments(
         ]
 
         logging.info(f"Running AMAS concat: fraction {frac}")
-
         cmd = (
             ["AMAS.py"]
             + amas_opts
@@ -297,7 +346,6 @@ def concat_alignments(
             ]
             + trimmed_files
         )
-
         run_cmd(cmd)
         cafiles[frac] = (concat_faa, partition_file)
 
@@ -309,24 +357,16 @@ def run_iqtree(
 ) -> None:
     """Run IQ-TREE"""
 
-    for frac, cafile in cafiles.items():
-        concat_faa, partition_file = cafile
+    for frac, (concat_faa, partition_file) in cafiles.items():
+        pct = int(frac * 100)
 
-        results_dir = output_dir / f"frac{int(frac * 100)}pct_results"
-        tree_prefix = results_dir / f"frac{int(frac * 100)}pct"
+        prefix = output_dir / f"frac{pct}pct_results/frac{pct}pct"
 
         logging.info(f"Running IQ-TREE on {str(concat_faa)} and {str(partition_file)}")
         run_cmd(
             ["iqtree"]
             + iqtree_opts
-            + [
-                "-s",
-                str(concat_faa),
-                "-p",
-                str(partition_file),
-                "-pre",
-                str(tree_prefix),
-            ]
+            + ["-s", str(concat_faa), "-p", str(partition_file), "-pre", str(prefix)]
         )
 
 
@@ -335,55 +375,61 @@ def main() -> None:
     for tool in SOFTWARES:
         check_software(tool)
 
-    args = parse_arguments()
+    args = parse_args()
 
     if not args.input_dir.is_dir():
         logging.error(f"Input {str(args.input_dir)} is not directory")
         sys.exit(1)
 
-    try:
-        args.out_dir.mkdir(parents=True)
-    except FileExistsError:
-        logging.error(f"Output directory {str(args.out_dir)} exists")
-        sys.exit(1)
-
-    # Parse fractions, ensure 0<frac<=1
-    fractions = set()
-    for frac in args.fraction.split(","):
-        try:
-            frac = float(frac)
-        except ValueError:
-            logging.error("fractions must be comma-spliced numbers")
-            sys.exit(1)
-        if not 0 < frac <= 1:
-            logging.error("fractions must be numbers between 0 and 1")
-            sys.exit(1)
-
-        fractions.add(round(frac, 2))
-    fractions = tuple(sorted(fractions))
-
-    # Replacing $CORES with exact CPU number selected by the user
-    args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
-    args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
-    args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
-
     logging.info("Starting process...")
 
-    # Construct output subdirectories
-    seq_dir = args.out_dir / "seqs"
-    raw_dir = seq_dir / "raw"
-    aligned_dir = seq_dir / "aligned"
-    trimmed_dir = seq_dir / "trimmed"
-    for d in (seq_dir, raw_dir, aligned_dir, trimmed_dir):
-        d.mkdir(parents=True, exist_ok=True)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
-    frac_dict = select_shared_genes(gene_dict, org_set, fractions)
-    write_gene_lists(frac_dict, args.out_dir)
-    align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
+    if args.command == "collect":
+        collect_gene_seqs(args.input_dir, args.out_dir)
 
-    cafiles = concat_alignments(frac_dict, args.out_dir, args.amas)
-    run_iqtree(cafiles, args.out_dir, args.iqtree)
+    elif args.command == "select":
+        fracs = parse_fractions(args.fraction)
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        frac_dict = select_shared_genes(gene_dict, org_set, fracs)
+        write_gene_lists(frac_dict, args.out_dir)
+
+    elif args.command == "align":
+        fracs = parse_fractions(args.fraction)
+        args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
+
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        frac_dict = select_shared_genes(gene_dict, org_set, fracs)
+        align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
+
+    elif args.command == "infer":
+        fracs = parse_fractions(args.fraction)
+        args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
+        args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
+
+        frac_dict = {}
+        for frac in fracs:
+            genes = load_genes_for_fraction(frac, args.out_dir)
+            frac_dict[frac] = genes
+        cafiles = concat_alignments(frac_dict, args.out_dir, args.amas)
+        run_iqtree(cafiles, args.out_dir, args.iqtree)
+
+    elif args.command == "all":
+        fracs = parse_fractions(args.fraction)
+        args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
+        args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
+        args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
+
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        frac_dict = select_shared_genes(gene_dict, org_set, fracs)
+        write_gene_lists(frac_dict, args.out_dir)
+        align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
+        cafiles = concat_alignments(frac_dict, args.out_dir, args.amas)
+        run_iqtree(cafiles, args.out_dir, args.iqtree)
+
+    else:
+        logging.error(f"Unknown command {args.command}")
+        sys.exit(1)
 
     logging.info("Job completed")
 
