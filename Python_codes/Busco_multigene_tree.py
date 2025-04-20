@@ -5,7 +5,7 @@
 Usage:
     Busco_multigene_tree.py \
         -i <INPUT_DIR> -f <FRACTION> [-c <CORES>] \
-        [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-a <AMAS_OPTION>] [-q <IQTREE_OPTION>] \
+        [-m <MAFFT_OPTION>] [-t <TRIMAL_OPTION>] [-error <AMAS_OPTION>] [-q <IQTREE_OPTION>] \
         [-o <OUT_DIR>] [-h|--help]
 
 Purpose:
@@ -23,7 +23,7 @@ Options:
     -o, --out_dir               Output directory path [default: ./output]
 
 Required Packages and Softwares:
-    Biopython, mafft, trimAl, AMAS, IQ-TREE
+    Biopython, tqdm, mafft, trimAl, AMAS, IQ-TREE
 
 Author: Arno Hagenbeek (ArnoHagenbeek), Akito Shima (ASUQ)
 Email: akito.shima@oist.jp
@@ -39,6 +39,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from Bio import SeqIO
+from tqdm import tqdm
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -163,6 +164,9 @@ def collect_gene_seqs(
     and append into per-gene files.
     """
 
+    raw_dir = output_dir / "seqs" / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
     # gene_name: {set of orgs that have it}
     gene_dict: dict[str, set[str]] = defaultdict(set)
     org_set: set[str] = set()  # all organism names seen
@@ -191,7 +195,7 @@ def collect_gene_seqs(
         for faa_file in seq_dir.glob("*.faa"):
             gene = faa_file.stem
             gene_dict[gene].add(org_name)
-            out_file = output_dir / f"{gene}.faa"
+            out_file = raw_dir / f"{gene}.faa"
             with faa_file.open("r") as inp, out_file.open("a") as out:
                 for rec in SeqIO.parse(inp, "fasta"):
                     rec.id = org_name
@@ -220,7 +224,10 @@ def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> Non
     """Dump which genes were used at each completeness threshold."""
 
     for frac, genes in frac_dict.items():
-        file_path = output_dir / f"frac{int(frac * 100)}pct_genes.txt"
+        results_dir = output_dir / f"frac{int(frac * 100)}pct_results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = results_dir / f"frac{int(frac * 100)}pct_genes.txt"
         with file_path.open("w") as out:
             out.write(f"Number of genes considered: {len(genes)}\n")
             out.write("Analyzed genes:\n")
@@ -235,13 +242,19 @@ def align_and_trim(
 ) -> None:
     """Align and trim all genes in the most inclusive set"""
 
+    seq_dir = output_dir / "seqs"
+    raw_dir = seq_dir / "raw"
+    aligned_dir = seq_dir / "aligned"
+    trimmed_dir = seq_dir / "trimmed"
+
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
 
-    for gene in genes:
-        infile = output_dir / f"{gene}.faa"
-        aligned = output_dir / f"{gene}_aligned.faa"
-        trimmed = output_dir / f"{gene}_trimmed.faa"
+    logging.info("Aligning the genes")
+    for gene in tqdm(genes):
+        infile = raw_dir / f"{gene}.faa"
+        aligned = aligned_dir / f"{gene}_aligned.faa"
+        trimmed = trimmed_dir / f"{gene}_trimmed.faa"
 
         logging.info(f"Running mafft {str(infile)} -> {str(aligned)}")
         with aligned.open("w") as out_f:
@@ -262,9 +275,13 @@ def concat_alignments(
             logging.warning(f"No genes for fraction {frac}, skipping...")
             continue
 
-        trimmed_files = [str(output_dir / f"{gene}_trimmed.faa") for gene in genes]
-        concat_faa = output_dir / f"frac{int(frac * 100)}pct_concat.faa"
-        partition_file = output_dir / f"frac{int(frac * 100)}pct_partitions.nex"
+        results_dir = output_dir / f"frac{int(frac*100)}pct_results"
+        concat_faa = results_dir / "concat.faa"
+        partition_file = results_dir / "partitions.nex"
+
+        trimmed_files = [
+            str(output_dir / f"seqs/trimmed/{g}_trimmed.faa") for g in genes
+        ]
 
         logging.info(f"Running AMAS concat: fraction {frac}")
 
@@ -296,7 +313,6 @@ def run_iqtree(
         concat_faa, partition_file = cafile
 
         results_dir = output_dir / f"frac{int(frac * 100)}pct_results"
-        results_dir.mkdir(parents=True, exist_ok=True)
         tree_prefix = results_dir / f"frac{int(frac * 100)}pct"
 
         logging.info(f"Running IQ-TREE on {str(concat_faa)} and {str(partition_file)}")
@@ -321,10 +337,14 @@ def main() -> None:
 
     args = parse_arguments()
 
+    if not args.input_dir.is_dir():
+        logging.error(f"Input {str(args.input_dir)} is not directory")
+        sys.exit(1)
+
     try:
-        args.out_dir.mkdir(parents=True, exist_ok=False)
+        args.out_dir.mkdir(parents=True)
     except FileExistsError:
-        logging.error(f"Output directory exists")
+        logging.error(f"Output directory {str(args.out_dir)} exists")
         sys.exit(1)
 
     # Parse fractions, ensure 0<frac<=1
@@ -348,6 +368,14 @@ def main() -> None:
     args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
 
     logging.info("Starting process...")
+
+    # Construct output subdirectories
+    seq_dir = args.out_dir / "seqs"
+    raw_dir = seq_dir / "raw"
+    aligned_dir = seq_dir / "aligned"
+    trimmed_dir = seq_dir / "trimmed"
+    for d in (seq_dir, raw_dir, aligned_dir, trimmed_dir):
+        d.mkdir(parents=True, exist_ok=True)
 
     gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
     frac_dict = select_shared_genes(gene_dict, org_set, fractions)
