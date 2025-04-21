@@ -93,8 +93,8 @@ OPTION_DEFS = {
         kwargs=dict(
             nargs="+",
             metavar="TRIMAL_OPTION",
-            default=["--automated1"],
-            help="trimAl options [default: trimal --automated1 -in $INPUT -out $OUTPUT]",
+            default=["-automated1"],
+            help="trimAl options [default: trimal -automated1 -in $INPUT -out $OUTPUT]",
         ),
     ),
     "amas": dict(
