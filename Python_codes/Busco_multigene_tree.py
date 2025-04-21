@@ -71,8 +71,8 @@ OPTION_DEFS = {
         flags=("-f", "--fraction"),
         kwargs=dict(
             type=str,
-            default="1.0",
-            help="Comma-spliced completeness fraction(s) (e.g. '0.8,0.9') [default: 1.0]",
+            default="0.9",
+            help="Comma-spliced completeness fraction(s) (e.g. '0.8,0.9') [default: 0.9]",
         ),
     ),
     "mafft": dict(
@@ -227,6 +227,8 @@ def collect_gene_seqs(
     and append into per-gene files.
     """
 
+    logging.info("Collecting genes from BUSCO outputs")
+
     raw_dir = output_dir / "seqs" / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -272,6 +274,8 @@ def select_shared_genes(
     gene_dict: dict[str, set[str]], org_set: set[str], fractions: list[float]
 ) -> dict[float, list[str]]:
     """For each fraction, return list of genes present above the threshold."""
+
+    logging.info("Selecting shared genes")
 
     total = len(org_set)
     frac_dict: dict[float, list[str]] = {}
