@@ -242,7 +242,9 @@ def collect_gene_seqs(
     gene_dict: dict[str, set[str]] = defaultdict(set)
     org_set: set[str] = set()  # all organism names seen
 
-    for seq_dir in input_dir.rglob("single_copy_busco_sequences"):
+    for seq_dir in input_dir.rglob(
+        "single_copy_busco_sequences", recurse_symlinks=True
+    ):
         logging.debug(f"Collecting genes from {seq_dir}")
 
         if not seq_dir.is_dir():
