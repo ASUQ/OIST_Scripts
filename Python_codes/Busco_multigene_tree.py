@@ -272,7 +272,7 @@ def collect_gene_seqs(
 
         logging.debug(f"Extracting genes from faa files")
         for faa_file in seq_dir.glob("*.faa"):
-            logging.debut(f"Extracting gene seq from {str(faa_file)}")
+            logging.debug(f"Extracting gene seq from {str(faa_file)}")
 
             gene = faa_file.stem
             gene_dict[gene].add(org_name)
