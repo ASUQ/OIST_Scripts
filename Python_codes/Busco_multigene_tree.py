@@ -36,6 +36,7 @@ Email: akito.shima@oist.jp
 import argparse
 import logging
 import math
+import shlex
 import shutil
 import subprocess
 import sys
@@ -82,46 +83,36 @@ OPTION_DEFS = {
     "mafft": dict(
         flags=("-m", "--mafft"),
         kwargs=dict(
-            nargs="+",
+            type=str,
             metavar="MAFFT_OPTION",
-            default=["--globalpair", "--maxiterate", "1000", "--thread", "$CORES"],
+            default="--globalpair --maxiterate 1000 --thread $CORES",
             help="MAFFT options [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]",
         ),
     ),
     "trimal": dict(
         flags=("-t", "--trimal"),
         kwargs=dict(
-            nargs="+",
+            type=str,
             metavar="TRIMAL_OPTION",
-            default=["-automated1"],
+            default="-automated1",
             help="trimAl options [default: trimal -automated1 -in $INPUT -out $OUTPUT]",
         ),
     ),
     "amas": dict(
         flags=("-a", "--amas"),
         kwargs=dict(
-            nargs="+",
+            type=str,
             metavar="AMAS_OPTION",
-            default=[
-                "concat",
-                "--in-format",
-                "fasta",
-                "--cores",
-                "$CORES",
-                "--data-type",
-                "aa",
-                "--part-format",
-                "nexus",
-            ],
+            default="concat --in-format fasta --cores $CORES --data-type aa --part-format nexus",
             help="AMAS options [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]",
         ),
     ),
     "iqtree": dict(
         flags=("-q", "--iqtree"),
         kwargs=dict(
-            nargs="+",
+            type=str,
             metavar="IQTREE_OPTION",
-            default=["-B", "1000", "-alrt", "1000", "-m", "MFP+MERGE", "-T", "AUTO"],
+            default="-B 1000 -alrt 1000 -m MFP+MERGE -T AUTO",
             help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]",
         ),
     ),
@@ -233,10 +224,16 @@ def collect_gene_seqs(
     and append into per-gene files.
     """
 
-    logging.info("Collecting genes from BUSCO outputs")
-
     raw_dir = output_dir / "seqs" / "raw"
-    raw_dir.mkdir(parents=True, exist_ok=True)
+    if raw_dir.exists():
+        if any(raw_dir.iterdirs()):
+            logging.fatal(
+                f"{raw_dir} is not empty — aborting to avoid mixing old results"
+            )
+            sys.exit(1)
+    raw_dir.mkdir(parents=True)
+
+    logging.info("Collecting genes from BUSCO outputs")
 
     # gene_name: {set of orgs that have it}
     gene_dict: dict[str, set[str]] = defaultdict(set)
@@ -317,7 +314,13 @@ def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> Non
     for frac, genes in frac_dict.items():
         pct = int(frac * 100)
         results_dir = output_dir / f"frac{pct}pct_results"
-        results_dir.mkdir(parents=True, exist_ok=True)
+        if results_dir.exists():
+            if any(results_dir.iterdirs()):
+                logging.fatal(
+                    f"{results_dir} is not empty — aborting to avoid mixing old results"
+                )
+                sys.exit(1)
+        results_dir.mkdir(parents=True)
 
         file_path = results_dir / f"frac{pct}pct_genes.txt"
         with file_path.open("w") as out:
@@ -340,8 +343,16 @@ def align_and_trim(
     raw_dir = seq_dir / "raw"
     aligned_dir = seq_dir / "aligned"
     trimmed_dir = seq_dir / "trimmed"
-    aligned_dir.mkdir(parents=True, exist_ok=True)
-    trimmed_dir.mkdir(parents=True, exist_ok=True)
+
+    for d in (aligned_dir, trimmed_dir):
+        if d.exists():
+            if any(d.iterdirs()):
+                logging.fatal(
+                    f"{d} is not empty — aborting to avoid mixing old results"
+                )
+                sys.exit(1)
+    aligned_dir.mkdir(parents=True)
+    trimmed_dir.mkdir(parents=True)
 
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
@@ -459,7 +470,8 @@ def main() -> None:
     elif args.command == "align":
         logging.info("Running subcomannd: align")
         fracs = parse_fractions(args.fraction)
-        args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
+        args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
+        args.trimal = shlex.split(args.trimal)
 
         gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
@@ -468,7 +480,8 @@ def main() -> None:
     elif args.command == "infer":
         logging.info("Running subcomannd: infer")
         fracs = parse_fractions(args.fraction)
-        args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
+        args.amas = shlex.split(args.amas.replace("$CORES", str(args.cores)))
+        args.iqtree = shlex.split(args.iqtree)
 
         frac_dict = {}
         for frac in fracs:
@@ -480,9 +493,10 @@ def main() -> None:
     elif args.command == "all":
         logging.info("Running subcomannd: all")
         fracs = parse_fractions(args.fraction)
-        args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
-        args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
-        args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
+        args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
+        args.trimal = shlex.split(args.trimal)
+        args.amas = shlex.split(args.amas.replace("$CORES", str(args.cores)))
+        args.iqtree = shlex.split(args.iqtree)
 
         gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
