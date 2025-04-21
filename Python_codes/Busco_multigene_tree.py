@@ -278,11 +278,11 @@ def collect_gene_seqs(
             gene_dict[gene].add(org_name)
 
             out_file = raw_dir / f"{gene}.faa"
-            with faa_file.open("r") as inp, out_file.open("a") as out:
-                for rec in SeqIO.parse(inp, "fasta"):
+            with out_file.open("a") as out:
+                for rec in SeqIO.parse(faa_file, "fasta"):
                     rec.id = org_name
                     rec.description = ""
-                    SeqIO.write(rec, out_file, "fasta")
+                    SeqIO.write(rec, out, "fasta")
 
     logging.debug(f"org_set: {org_set}")
     logging.debug(f"gene_dict: {gene_dict}")
