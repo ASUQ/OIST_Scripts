@@ -70,7 +70,9 @@ OPTION_DEFS = {
     "fraction": dict(
         flags=("-f", "--fraction"),
         kwargs=dict(
-            type=str, help="Comma-spliced completeness fraction(s) (e.g. '0.5,0.8')"
+            type=str,
+            default="1.0",
+            help="Comma-spliced completeness fraction(s) (e.g. '0.8,0.9') [default: 1.0]",
         ),
     ),
     "mafft": dict(
