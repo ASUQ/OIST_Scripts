@@ -123,20 +123,35 @@ OPTION_DEFS = {
 
 
 SUBCMD_OPTS = {
-    "collect": ["input_dir", "out_dir"],
-    "select": ["input_dir", "out_dir", "fraction"],
-    "align": ["input_dir", "out_dir", "fraction", "cores", "mafft", "trimal"],
-    "infer": ["input_dir", "out_dir", "fraction", "cores", "amas", "iqtree"],
-    "all": [
-        "input_dir",
-        "out_dir",
-        "fraction",
-        "cores",
-        "mafft",
-        "trimal",
-        "amas",
-        "iqtree",
-    ],
+    "collect": (
+        ("input_dir", "out_dir"),
+        "Collect per-gene FASTA files from BUSCO outputs",
+    ),
+    "select": (
+        ("input_dir", "out_dir", "fraction"),
+        "Select shared genes & write gene lists",
+    ),
+    "align": (
+        ("input_dir", "out_dir", "fraction", "cores", "mafft", "trimal"),
+        "Align & trim gene alignments (mafft & trimAl)",
+    ),
+    "infer": (
+        ("input_dir", "out_dir", "fraction", "cores", "amas", "iqtree"),
+        "Concatenate & build tree (AMAS & IQ-TREE)",
+    ),
+    "all": (
+        (
+            "input_dir",
+            "out_dir",
+            "fraction",
+            "cores",
+            "mafft",
+            "trimal",
+            "amas",
+            "iqtree",
+        ),
+        "Run all steps: collect, select, align, infer",
+    ),
 }
 
 
@@ -148,8 +163,8 @@ def parse_args() -> argparse.Namespace:
     )
     subs = parser.add_subparsers(dest="command", required=True)
 
-    for cmd, opt_keys in SUBCMD_OPTS.items():
-        p = subs.add_parser(cmd, help=f"{cmd} step")
+    for cmd, (opt_keys, help) in SUBCMD_OPTS.items():
+        p = subs.add_parser(cmd, help=f"{help}")
         for key in opt_keys:
             flags = OPTION_DEFS[key]["flags"]
             kwargs = OPTION_DEFS[key]["kwargs"]
