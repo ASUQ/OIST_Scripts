@@ -411,7 +411,9 @@ def run_iqtree(
 
     logging.info("Building trees")
 
-    for frac, (concat_faa, partition_file) in cafiles.items():
+    cafiles_sorted = {key: cafiles[key] for key in sorted(cafiles.keys(), reverse=True)}
+
+    for frac, (concat_faa, partition_file) in cafiles_sorted.items():
         pct = int(frac * 100)
 
         prefix = output_dir / f"frac{pct}pct_results/frac{pct}pct"
