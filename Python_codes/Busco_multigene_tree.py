@@ -121,8 +121,8 @@ OPTION_DEFS = {
         kwargs=dict(
             nargs="+",
             metavar="IQTREE_OPTION",
-            default=["-B", "1000", "-alrt", "1000", "-T", "$CORES"],
-            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -T $CORES -s $INPUT -p $PARTITION -pre $PREFIX]",
+            default=["-B", "1000", "-alrt", "1000", "-m", "MFP+MERGE", "-T", "AUTO"],
+            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]",
         ),
     ),
 }
@@ -467,7 +467,6 @@ def main() -> None:
         logging.info("Running subcomannd: infer")
         fracs = parse_fractions(args.fraction)
         args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
-        args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
 
         frac_dict = {}
         for frac in fracs:
