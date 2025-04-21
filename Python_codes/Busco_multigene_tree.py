@@ -69,7 +69,7 @@ OPTION_DEFS = {
     ),
     "verbose": dict(
         flags=("-v", "--verbose"),
-        kwargs=dict(action="store_true", help="Enable verbose logging for debug"),
+        kwargs=dict(action="store_true", help=argparse.SUPPRESS),
     ),
     "fraction": dict(
         flags=("-f", "--fraction"),
@@ -190,6 +190,7 @@ def check_software(tool: str) -> None:
 def run_cmd(cmd: list[str], stdout=None) -> None:
     """Execute a subprocess call, abort on failure"""
     try:
+        logging.debug(f"Executing: {cmd}")
         subprocess.check_call(cmd, stdout=stdout)
     except subprocess.CalledProcessError as e:
         logging.fatal(f"Command failed {e.returncode}: {' '.join(cmd)}")
@@ -242,6 +243,8 @@ def collect_gene_seqs(
     org_set: set[str] = set()  # all organism names seen
 
     for seq_dir in input_dir.rglob("single_copy_busco_sequences"):
+        logging.debug(f"Collecting genes from {seq_dir}")
+
         if not seq_dir.is_dir():
             logging.debug(f"{seq_dir} is not directory")
             continue
@@ -261,6 +264,8 @@ def collect_gene_seqs(
             raise ValueError(
                 f"Organism Name is duplicated. Please check the directory structure."
             )
+
+        logging.debug(f"org_name: {org_name} found")
         org_set.add(org_name)
 
         for faa_file in seq_dir.glob("*.faa"):
@@ -273,6 +278,9 @@ def collect_gene_seqs(
                     rec.id = org_name
                     rec.description = ""
                     SeqIO.write(rec, out_file, "fasta")
+
+    logging.debug(f"org_set: {org_set}")
+    logging.debug(f"gene_dict: {gene_dict}")
 
     return gene_dict, org_set
 
@@ -291,6 +299,8 @@ def select_shared_genes(
         frac_dict[frac] = [
             gene for gene, orgs in gene_dict.items() if len(orgs) >= threshold
         ]
+
+    logging.debug(f"frac_dict: {frac_dict}")
     return frac_dict
 
 
@@ -330,6 +340,10 @@ def align_and_trim(
 
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
+
+    logging.debug(
+        f"Aligning genes in fraction: {smallest_frac} which has {len(genes)} genes"
+    )
 
     for gene in tqdm(genes, desc="Align & trim"):
         infile = raw_dir / f"{gene}.faa"
