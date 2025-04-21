@@ -253,10 +253,10 @@ def collect_gene_seqs(
 
         ###
         # Extract sample name
-        # assuming structure: /input_dir/subdirectories/{sample_name}/busco_output/run_lineage/single_copy_busco_sequences/*.faa
+        # assuming structure: /input_dir/subdirectories/{sample_name}/busco_output/run_lineage/busco_sequences/single_copy_busco_sequences/*.faa
         ###
         try:
-            org_name = seq_dir.relative_to(input_dir).parts[-4]
+            org_name = seq_dir.relative_to(input_dir).parts[-5]
         except IndexError:
             raise ValueError(
                 f"Directory {seq_dir} too shallow for extracting organism name."
