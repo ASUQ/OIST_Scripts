@@ -86,7 +86,7 @@ OPTION_DEFS = {
             type=str,
             metavar="MAFFT_OPTION",
             default="--globalpair --maxiterate 1000 --thread $CORES",
-            help="MAFFT options [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]",
+            help="MAFFT options [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]\n Parse with double quotation",
         ),
     ),
     "trimal": dict(
@@ -95,7 +95,7 @@ OPTION_DEFS = {
             type=str,
             metavar="TRIMAL_OPTION",
             default="-automated1",
-            help="trimAl options [default: trimal -automated1 -in $INPUT -out $OUTPUT]",
+            help="trimAl options [default: trimal -automated1 -in $INPUT -out $OUTPUT]\n Parse with double quotation",
         ),
     ),
     "amas": dict(
@@ -104,7 +104,7 @@ OPTION_DEFS = {
             type=str,
             metavar="AMAS_OPTION",
             default="concat --in-format fasta --cores $CORES --data-type aa --part-format nexus",
-            help="AMAS options [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]",
+            help="AMAS options [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]\n Parse with double quotation",
         ),
     ),
     "iqtree": dict(
@@ -113,7 +113,7 @@ OPTION_DEFS = {
             type=str,
             metavar="IQTREE_OPTION",
             default="-B 1000 -alrt 1000 -m MFP+MERGE -T AUTO",
-            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]",
+            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]\n Parse with double quotation",
         ),
     ),
 }
