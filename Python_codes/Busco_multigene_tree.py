@@ -77,43 +77,58 @@ OPTION_DEFS = {
         kwargs=dict(
             type=str,
             default="0.9",
-            help="Comma-spliced completeness fraction(s) (e.g. '0.8,0.9') [default: 0.9]",
+            help=f"Comma-spliced completeness fraction(s)\n(e.g. '0.8,0.9') [default: 0.9]",
         ),
     ),
     "mafft": dict(
         flags=("-m", "--mafft"),
         kwargs=dict(
             type=str,
-            metavar="MAFFT_OPTION",
+            metavar="MAFFT_OPTIONS",
             default="--globalpair --maxiterate 1000 --thread $CORES",
-            help="MAFFT options [default: mafft --globalpair --maxiterate 1000 --thread $CORES $INPUT > $OUTPUT]\n Parse with double quotation",
+            help=(
+                "MAFFT options\n"
+                "[default: mafft --globalpair --maxiterate 1000\n"
+                "    --thread $CORES $INPUT > $OUTPUT]\n"
+                "Parse with double quotes"
+            ),
         ),
     ),
     "trimal": dict(
         flags=("-t", "--trimal"),
         kwargs=dict(
             type=str,
-            metavar="TRIMAL_OPTION",
+            metavar="TRIMAL_OPTIONS",
             default="-automated1",
-            help="trimAl options [default: trimal -automated1 -in $INPUT -out $OUTPUT]\n Parse with double quotation",
+            help="trimAl options\n"
+            "[default: trimal -automated1 -in $INPUT -out $OUTPUT]\n"
+            "Parse with double quotes",
         ),
     ),
     "amas": dict(
         flags=("-a", "--amas"),
         kwargs=dict(
             type=str,
-            metavar="AMAS_OPTION",
+            metavar="AMAS_OPTIONS",
             default="concat --in-format fasta --cores $CORES --data-type aa --part-format nexus",
-            help="AMAS options [default: AMAS.py concat --in-files $INPUT --in-format fasta --data-type aa --concat-out $OUT_concat.faa --concat-part $OUT_partitions.txt --part-format nexus --cores $Cores]\n Parse with double quotation",
+            help="AMAS options\n"
+            "[default: AMAS.py concat --in-files $INPUT --in-format fasta\n"
+            "    --data-type aa --concat-out $OUT_concat.faa\n"
+            "    --concat-part $OUT_partitions.txt\n"
+            "    --part-format nexus --cores $Cores]\n"
+            "Parse with double quotes",
         ),
     ),
     "iqtree": dict(
         flags=("-q", "--iqtree"),
         kwargs=dict(
             type=str,
-            metavar="IQTREE_OPTION",
+            metavar="IQTREE_OPTIONS",
             default="-B 1000 -alrt 1000 -m MFP+MERGE -T AUTO",
-            help="IQ-TREE options [default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]\n Parse with double quotation",
+            help="IQ-TREE options\n"
+            "[default: iqtree -B 1000 -alrt 1000 -m MFP+MERGE\n"
+            "    -T AUTO -s $INPUT -p $PARTITION -pre $PREFIX]\n"
+            "Parse with double quotes",
         ),
     ),
 }
@@ -157,12 +172,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build multi-gene phylogenomic tree from BUSCO single-copy orthologous gene",
         epilog="Required package and Softwares: Biopython, mafft, trimAl, AMAS, IQ-TREE",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=argparse.RawTextHelpFormatter,
     )
     subs = parser.add_subparsers(dest="command", required=True)
 
     for cmd, (opt_keys, help) in SUBCMD_OPTS.items():
-        p = subs.add_parser(cmd, help=f"{help}")
+        p = subs.add_parser(
+            cmd,
+            help=help,
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
         for key in opt_keys:
             flags = OPTION_DEFS[key]["flags"]
             kwargs = OPTION_DEFS[key]["kwargs"]
