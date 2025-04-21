@@ -67,6 +67,10 @@ OPTION_DEFS = {
         flags=("-c", "--cores"),
         kwargs=dict(type=int, default=8, help="CPUs to use [default: 8]"),
     ),
+    "verbose": dict(
+        flags=("-v", "--verbose"),
+        kwargs=dict(action="store_true", help="Enable verbose logging for debug"),
+    ),
     "fraction": dict(
         flags=("-f", "--fraction"),
         kwargs=dict(
@@ -126,19 +130,19 @@ OPTION_DEFS = {
 
 SUBCMD_OPTS = {
     "collect": (
-        ("input_dir", "out_dir"),
+        ("input_dir", "out_dir", "verbose"),
         "Collect per-gene FASTA files from BUSCO outputs",
     ),
     "select": (
-        ("input_dir", "out_dir", "fraction"),
+        ("input_dir", "out_dir", "fraction", "verbose"),
         "Select shared genes & write gene lists",
     ),
     "align": (
-        ("input_dir", "out_dir", "fraction", "cores", "mafft", "trimal"),
+        ("input_dir", "out_dir", "fraction", "cores", "mafft", "trimal", "verbose"),
         "Align & trim gene alignments (mafft & trimAl)",
     ),
     "infer": (
-        ("input_dir", "out_dir", "fraction", "cores", "amas", "iqtree"),
+        ("input_dir", "out_dir", "fraction", "cores", "amas", "iqtree", "verbose"),
         "Concatenate & build tree (AMAS & IQ-TREE)",
     ),
     "all": (
@@ -151,6 +155,7 @@ SUBCMD_OPTS = {
             "trimal",
             "amas",
             "iqtree",
+            "verbose",
         ),
         "Run all steps: collect, select, align, infer",
     ),
@@ -238,6 +243,7 @@ def collect_gene_seqs(
 
     for seq_dir in input_dir.rglob("single_copy_busco_sequences"):
         if not seq_dir.is_dir():
+            logging.debug(f"{seq_dir} is not directory")
             continue
 
         ###
@@ -258,6 +264,7 @@ def collect_gene_seqs(
         org_set.add(org_name)
 
         for faa_file in seq_dir.glob("*.faa"):
+            logging.debug(f"Extracting genes from faa files")
             gene = faa_file.stem
             gene_dict[gene].add(org_name)
             out_file = raw_dir / f"{gene}.faa"
@@ -290,6 +297,8 @@ def select_shared_genes(
 def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> None:
     """Write out which genes pass completeness threshold."""
 
+    logging.info("Writing out gene lists")
+
     for frac, genes in frac_dict.items():
         pct = int(frac * 100)
         results_dir = output_dir / f"frac{pct}pct_results"
@@ -310,6 +319,8 @@ def align_and_trim(
 ) -> None:
     """Align and trim all genes in the most inclusive set"""
 
+    logging.info("Aligning the genes")
+
     seq_dir = output_dir / "seqs"
     raw_dir = seq_dir / "raw"
     aligned_dir = seq_dir / "aligned"
@@ -320,7 +331,6 @@ def align_and_trim(
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
 
-    logging.info("Aligning the genes")
     for gene in tqdm(genes, desc="Align & trim"):
         infile = raw_dir / f"{gene}.faa"
         aligned = aligned_dir / f"{gene}_aligned.faa"
@@ -338,6 +348,8 @@ def concat_alignments(
     frac_dict: dict[float, list[str]], output_dir: Path, amas_opts: list[str]
 ) -> dict[float, tuple[Path, Path]]:
     """Run AMAS to concatenate trimmed gene alignments using AMAS"""
+
+    logging.info(f"Concatenating alignments")
 
     cafiles: dict[float, tuple[Path, Path]] = {}
     for frac, genes in frac_dict.items():
@@ -378,6 +390,8 @@ def run_iqtree(
 ) -> None:
     """Run IQ-TREE"""
 
+    logging.info("Building trees")
+
     for frac, (concat_faa, partition_file) in cafiles.items():
         pct = int(frac * 100)
 
@@ -397,6 +411,10 @@ def main() -> None:
         check_software(tool)
 
     args = parse_args()
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    logging.debug(f"parsed arguments: {args!r}")
 
     if not args.input_dir.is_dir():
         logging.error(f"Input {str(args.input_dir)} is not directory")
@@ -407,15 +425,18 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.command == "collect":
+        logging.info("Running subcomannd: collect")
         collect_gene_seqs(args.input_dir, args.out_dir)
 
     elif args.command == "select":
+        logging.info("Running subcomannd: select")
         fracs = parse_fractions(args.fraction)
         gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
 
     elif args.command == "align":
+        logging.info("Running subcomannd: align")
         fracs = parse_fractions(args.fraction)
         args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
 
@@ -424,6 +445,7 @@ def main() -> None:
         align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
 
     elif args.command == "infer":
+        logging.info("Running subcomannd: infer")
         fracs = parse_fractions(args.fraction)
         args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
         args.iqtree = [opt.replace("$CORES", str(args.cores)) for opt in args.iqtree]
@@ -436,6 +458,7 @@ def main() -> None:
         run_iqtree(cafiles, args.out_dir, args.iqtree)
 
     elif args.command == "all":
+        logging.info("Running subcomannd: all")
         fracs = parse_fractions(args.fraction)
         args.mafft = [opt.replace("$CORES", str(args.cores)) for opt in args.mafft]
         args.amas = [opt.replace("$CORES", str(args.cores)) for opt in args.amas]
