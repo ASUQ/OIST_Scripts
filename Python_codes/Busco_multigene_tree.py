@@ -270,10 +270,13 @@ def collect_gene_seqs(
         logging.debug(f"org_name: {org_name} found")
         org_set.add(org_name)
 
+        logging.debug(f"Extracting genes from faa files")
         for faa_file in seq_dir.glob("*.faa"):
-            logging.debug(f"Extracting genes from faa files")
+            logging.debut(f"Extracting gene seq from {str(faa_file)}")
+
             gene = faa_file.stem
             gene_dict[gene].add(org_name)
+
             out_file = raw_dir / f"{gene}.faa"
             with faa_file.open("r") as inp, out_file.open("a") as out:
                 for rec in SeqIO.parse(inp, "fasta"):
