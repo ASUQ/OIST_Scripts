@@ -49,7 +49,7 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-SOFTWARES = ["mafft", "trimal", "AMAS.py", "iqtree"]
+SOFTWARES = ("mafft", "trimal", "AMAS.py", "iqtree")
 
 OPTION_DEFS = {
     "input_dir": dict(
@@ -254,7 +254,7 @@ def collect_gene_seqs(
 
     raw_dir = output_dir / "seqs" / "raw"
     if raw_dir.exists():
-        if any(raw_dir.iterdirs()):
+        if any(raw_dir.iterdir()):
             logging.fatal(
                 f"{raw_dir} is not empty — aborting to avoid mixing old results"
             )
@@ -343,7 +343,7 @@ def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> Non
         pct = int(frac * 100)
         results_dir = output_dir / f"frac{pct}pct_results"
         if results_dir.exists():
-            if any(results_dir.iterdirs()):
+            if any(results_dir.iterdir()):
                 logging.fatal(
                     f"{results_dir} is not empty — aborting to avoid mixing old results"
                 )
@@ -374,7 +374,7 @@ def align_and_trim(
 
     for d in (aligned_dir, trimmed_dir):
         if d.exists():
-            if any(d.iterdirs()):
+            if any(d.iterdir()):
                 logging.fatal(
                     f"{d} is not empty — aborting to avoid mixing old results"
                 )
