@@ -167,6 +167,15 @@ SUBCMD_OPTS = {
     ),
 }
 
+# Python version check
+REQUIRED = (3, 9)
+if sys.version_info < REQUIRED:
+    logging.fatal(
+        f"this script requires Python {REQUIRED[0]}.{REQUIRED[1]}+, "
+        f"but you’re running {sys.version_info.major}.{sys.version_info.minor}"
+    )
+    sys.exit(1)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
