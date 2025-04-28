@@ -39,10 +39,10 @@ This pipeline automates extraction of BUSCO single-copy orthologs across multipl
 
 2. Create and activate a conda environment
 	```bash
-	conda create -n busco_tree_env 'python>=3.9' \
+	conda create -n busco_phylogeny 'python>=3.9' \
 		biopython tqdm mafft trimal iqtree amas \
 		-c conda-forge -c bioconda
-	conda activate busco_tree_env
+	conda activate busco_phylogeny
 	```
 
 3. Make the script executable

@@ -250,7 +250,7 @@ def collect_gene_seqs(
     input_dir: Path, output_dir: Path
 ) -> tuple[dict[str, set[str]], set[str]]:
     """
-    Parse single-copy BUSCO FASTAs with SeqIO, prefix record.id with organism name,
+    Parse single-copy BUSCO FASTAs with SeqIO, prefix record.id with sample name,
     and append into per-gene files.
     """
 
@@ -267,7 +267,7 @@ def collect_gene_seqs(
 
     # gene_name: {set of orgs that have it}
     gene_dict: dict[str, set[str]] = defaultdict(set)
-    org_set: set[str] = set()  # all organism names seen
+    org_set: set[str] = set()  # all sample names seen
 
     for seq_dir in input_dir.rglob(
         "single_copy_busco_sequences", recurse_symlinks=True
@@ -286,12 +286,12 @@ def collect_gene_seqs(
             org_name = seq_dir.relative_to(input_dir).parts[-5]
         except IndexError:
             raise ValueError(
-                f"Directory {seq_dir} too shallow for extracting organism name."
+                f"Directory {seq_dir} is too shallow for extracting sample name."
             )
 
         if org_name in org_set:
             raise ValueError(
-                f"Organism Name is duplicated. Please check the directory structure."
+                f"Sample name is duplicated. Please check the directory structure."
             )
 
         logging.debug(f"org_name: {org_name} found")
