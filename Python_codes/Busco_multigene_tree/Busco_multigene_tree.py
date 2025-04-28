@@ -18,7 +18,7 @@ Subcommands:
 Options:
     -h, --help                  Show this
     -i, --input_dir             Path to the input directory which contains all BUSCO outputs
-    -f, --fraction              Comma-spliced fractions for creating mulit-gene phylogenetic tree
+    -f, --fraction              Comma-spliced fractions for creating multi-gene phylogenetic tree
     -c, --cores                 Number of CPUs to execute [default: 8]
     -m, --mafft                 mafft options [default: --globalpair --maxiterate 1000 --thread $CORES]
     -t, --trimal                trimAl options
@@ -47,7 +47,9 @@ from Bio import SeqIO
 from tqdm import tqdm
 
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
+)
 
 SOFTWARES = ("mafft", "trimal", "AMAS.py", "iqtree")
 
@@ -485,18 +487,18 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.command == "collect":
-        logging.info("Running subcomannd: collect")
+        logging.info("Running subcommand: collect")
         collect_gene_seqs(args.input_dir, args.out_dir)
 
     elif args.command == "select":
-        logging.info("Running subcomannd: select")
+        logging.info("Running subcommand: select")
         fracs = parse_fractions(args.fraction)
         gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
 
     elif args.command == "align":
-        logging.info("Running subcomannd: align")
+        logging.info("Running subcommand: align")
         fracs = parse_fractions(args.fraction)
         args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
         args.trimal = shlex.split(args.trimal)
@@ -506,7 +508,7 @@ def main() -> None:
         align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
 
     elif args.command == "infer":
-        logging.info("Running subcomannd: infer")
+        logging.info("Running subcommand: infer")
         fracs = parse_fractions(args.fraction)
         args.amas = shlex.split(args.amas.replace("$CORES", str(args.cores)))
         args.iqtree = shlex.split(args.iqtree)
@@ -519,7 +521,7 @@ def main() -> None:
         run_iqtree(cafiles, args.out_dir, args.iqtree)
 
     elif args.command == "all":
-        logging.info("Running subcomannd: all")
+        logging.info("Running subcommand: all")
         fracs = parse_fractions(args.fraction)
         args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
         args.trimal = shlex.split(args.trimal)
