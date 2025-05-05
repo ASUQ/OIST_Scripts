@@ -41,9 +41,11 @@ import shutil
 import subprocess
 import sys
 from collections import defaultdict
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 from tqdm import tqdm
 
 
@@ -247,7 +249,9 @@ def load_genes_for_fraction(frac: float, output_dir: Path) -> list[str]:
 
 
 def collect_gene_seqs(
-    input_dir: Path, output_dir: Path
+    input_dir: Path,
+    output_dir: Path,
+    cores: int,
 ) -> tuple[dict[str, set[str]], set[str]]:
     """
     Parse single-copy BUSCO FASTAs with SeqIO, prefix record.id with sample name,
@@ -255,33 +259,27 @@ def collect_gene_seqs(
     """
 
     raw_dir = output_dir / "seqs" / "raw"
-    if raw_dir.exists():
-        if any(raw_dir.iterdir()):
-            logging.fatal(
-                f"{raw_dir} is not empty — aborting to avoid mixing old results"
-            )
-            sys.exit(1)
-    raw_dir.mkdir(parents=True)
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    if any(raw_dir.iterdir()):
+        logging.fatal(f"{raw_dir} is not empty — aborting to avoid mixing old results")
+        sys.exit(1)
 
     logging.info("Collecting genes from BUSCO outputs")
 
-    # gene_name: {set of orgs that have it}
-    gene_dict: dict[str, set[str]] = defaultdict(set)
-    org_set: set[str] = set()  # all sample names seen
+    seq_dirs = [
+        d
+        for d in input_dir.rglob("single_copy_busco_sequences", recurse_symlinks=True)
+        if d.is_dir()
+    ]
 
-    for seq_dir in input_dir.rglob(
-        "single_copy_busco_sequences", recurse_symlinks=True
-    ):
-        logging.debug(f"Collecting genes from {seq_dir}")
+    if not seq_dirs:
+        logging.error(f"No BUSCO output directories found in {input_dir}")
+        sys.exit(1)
 
-        if not seq_dir.is_dir():
-            logging.debug(f"{seq_dir} is not directory")
-            continue
+    logging.info(f"Found {len(seq_dirs)} samples; parsing with {cores} threads")
 
-        ###
-        # Extract sample name
-        # assuming structure: /input_dir/subdirectories/{sample_name}/busco_output/run_lineage/busco_sequences/single_copy_busco_sequences/*.faa
-        ###
+    def parse_sample(seq_dir: Path) -> tuple[str, dict[str, list[SeqRecord]]]:
+        """Function to parse a single sample directory"""
         try:
             org_name = seq_dir.relative_to(input_dir).parts[-5]
         except IndexError:
@@ -289,30 +287,86 @@ def collect_gene_seqs(
                 f"Directory {seq_dir} is too shallow for extracting sample name."
             )
 
-        if org_name in org_set:
-            raise ValueError(
-                f"Sample name is duplicated. Please check the directory structure."
-            )
-
-        logging.debug(f"org_name: {org_name} found")
-        org_set.add(org_name)
-
-        logging.debug(f"Extracting genes from faa files")
+        local: dict[str, list[SeqRecord]] = defaultdict(list)
         for faa_file in seq_dir.glob("*.faa"):
             logging.debug(f"Extracting gene seq from {str(faa_file)}")
-
-            gene = faa_file.stem
-            gene_dict[gene].add(org_name)
-
-            out_file = raw_dir / f"{gene}.faa"
-            with out_file.open("a") as out:
+            try:
+                gene = faa_file.stem
                 for rec in SeqIO.parse(faa_file, "fasta"):
                     rec.id = org_name
                     rec.description = ""
-                    SeqIO.write(rec, out, "fasta")
+                    local[gene].append(rec)
 
+            except Exception as err:
+                raise RuntimeError(
+                    f"Sample='{org_name}', File='{faa_file}': {err}"
+                ) from err
+
+        return org_name, local
+
+    # Run parsing in parallel
+    results: list[tuple[str, dict[str, list[SeqRecord]]]] = []
+    with ThreadPoolExecutor(max_workers=cores) as pool:
+        futures_to_dir: dict[Future, Path] = {
+            pool.submit(parse_sample, d): d for d in seq_dirs
+        }
+
+        try:
+            for future in tqdm(
+                as_completed(futures_to_dir),
+                total=len(futures_to_dir),
+                desc="Parsing samples",
+            ):
+                org_name, local = future.result()
+                results.append((org_name, local))
+
+        except Exception as e:
+            failed_dir = futures_to_dir[future]
+            sample_name = failed_dir.relative_to(input_dir).parts[-5]
+            logging.fatal(
+                f"Aborting: error in sample '{sample_name}', dir '{failed_dir}': {e}"
+            )
+            for f in futures_to_dir:
+                f.cancel()
+            sys.exit(1)
+
+    logging.info(f"Parsed {len(results)} samples")
+
+    gene_dict: dict[str, set[str]] = defaultdict(set)
+    org_set: set[str] = set()
+    gene_records: dict[str, list[SeqRecord]] = defaultdict(list)
+
+    for org_name, local in results:
+        if org_name in org_set:
+            logging.error(f"Sample name is duplicated: {org_name}")
+            sys.exit(1)
+        org_set.add(org_name)
+
+        for gene, recs in local.items():
+            gene_dict[gene].add(org_name)
+            gene_records[gene].extend(recs)
+
+    def write_gene(item: tuple[str, list[SeqRecord]]) -> None:
+        """Write out the gene records to a file"""
+        gene, recs = item
+        out_file = raw_dir / f"{gene}.faa"
+        with out_file.open("w") as out:
+            SeqIO.write(recs, out, "fasta")
+
+    logging.info(f"Writing {len(gene_records)} gene files with {cores} threads")
+    with ThreadPoolExecutor(max_workers=cores) as pool:
+        list(
+            tqdm(
+                pool.map(write_gene, gene_records.items()),
+                total=len(gene_records),
+                desc="Writing gene files",
+            )
+        )
+
+    logging.info(f"Finished writing {len(gene_records)} gene files")
     logging.debug(f"org_set: {org_set}")
     logging.debug(f"gene_dict: {gene_dict}")
+    logging.info(f"Finished collecting gene sequences from {len(org_set)} samples")
 
     return gene_dict, org_set
 
@@ -344,13 +398,12 @@ def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> Non
     for frac, genes in frac_dict.items():
         pct = int(frac * 100)
         results_dir = output_dir / f"frac{pct}pct_results"
-        if results_dir.exists():
-            if any(results_dir.iterdir()):
-                logging.fatal(
-                    f"{results_dir} is not empty — aborting to avoid mixing old results"
-                )
-                sys.exit(1)
-        results_dir.mkdir(parents=True)
+        results_dir.mkdir(parents=True, exist_ok=True)
+        if any(results_dir.iterdir()):
+            logging.fatal(
+                f"{results_dir} is not empty — aborting to avoid mixing old results"
+            )
+            sys.exit(1)
 
         file_path = results_dir / f"frac{pct}pct_genes.txt"
         with file_path.open("w") as out:
@@ -375,14 +428,10 @@ def align_and_trim(
     trimmed_dir = seq_dir / "trimmed"
 
     for d in (aligned_dir, trimmed_dir):
-        if d.exists():
-            if any(d.iterdir()):
-                logging.fatal(
-                    f"{d} is not empty — aborting to avoid mixing old results"
-                )
-                sys.exit(1)
-    aligned_dir.mkdir(parents=True)
-    trimmed_dir.mkdir(parents=True)
+        d.mkdir(parents=True, exist_ok=True)
+        if any(d.iterdir()):
+            logging.fatal(f"{d} is not empty — aborting to avoid mixing old results")
+            sys.exit(1)
 
     smallest_frac = min(frac_dict.keys())
     genes = frac_dict[smallest_frac]
@@ -488,12 +537,12 @@ def main() -> None:
 
     if args.command == "collect":
         logging.info("Running subcommand: collect")
-        collect_gene_seqs(args.input_dir, args.out_dir)
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
 
     elif args.command == "select":
         logging.info("Running subcommand: select")
         fracs = parse_fractions(args.fraction)
-        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
 
@@ -503,7 +552,7 @@ def main() -> None:
         args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
         args.trimal = shlex.split(args.trimal)
 
-        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
 
@@ -528,7 +577,7 @@ def main() -> None:
         args.amas = shlex.split(args.amas.replace("$CORES", str(args.cores)))
         args.iqtree = shlex.split(args.iqtree)
 
-        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir)
+        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
         align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
