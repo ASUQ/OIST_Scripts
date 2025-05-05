@@ -323,7 +323,7 @@ def collect_gene_seqs(
         except Exception as e:
             failed_dir = futures_to_dir[future]
             sample_name = failed_dir.relative_to(input_dir).parts[-5]
-            logging.fatal(
+            logging.error(
                 f"Aborting: error in sample '{sample_name}', dir '{failed_dir}': {e}"
             )
             for f in futures_to_dir:
@@ -367,6 +367,28 @@ def collect_gene_seqs(
     logging.debug(f"org_set: {org_set}")
     logging.debug(f"gene_dict: {gene_dict}")
     logging.info(f"Finished collecting gene sequences from {len(org_set)} samples")
+
+    return gene_dict, org_set
+
+
+def load_gene_dict(output_dir: Path) -> tuple[dict[str, set[str]], set[str]]:
+    """Parse previously collected gene FASTAs to rebuild gene_dict and org_set."""
+    gene_dict: dict[str, set[str]] = defaultdict(set)
+    org_set: set[str] = set()
+
+    raw_dir = output_dir / "seqs" / "raw"
+    if not raw_dir.exists() or not any(raw_dir.iterdir()):
+        logging.error(
+            f"Raw directory '{raw_dir}' is missing or empty. Run 'collect' first."
+        )
+        sys.exit(1)
+
+    logging.info("Loading gene sequences from raw directory")
+    for faa_file in raw_dir.glob("*.faa"):
+        gene = faa_file.stem
+        for rec in SeqIO.parse(faa_file, "fasta"):
+            org_set.add(rec.id)
+            gene_dict[gene].add(rec.id)
 
     return gene_dict, org_set
 
@@ -542,7 +564,7 @@ def main() -> None:
     elif args.command == "select":
         logging.info("Running subcommand: select")
         fracs = parse_fractions(args.fraction)
-        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
+        gene_dict, org_set = load_gene_dict(args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
 
@@ -552,7 +574,7 @@ def main() -> None:
         args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
         args.trimal = shlex.split(args.trimal)
 
-        gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
+        gene_dict, org_set = load_gene_dict(args.out_dir)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
 
