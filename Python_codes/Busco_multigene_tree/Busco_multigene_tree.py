@@ -140,11 +140,11 @@ OPTION_DEFS = {
 
 SUBCMD_OPTS = {
     "collect": (
-        ("input_dir", "out_dir", "verbose"),
+        ("input_dir", "out_dir", "cores", "verbose"),
         "Collect per-gene FASTA files from BUSCO outputs",
     ),
     "select": (
-        ("input_dir", "out_dir", "fraction", "verbose"),
+        ("input_dir", "out_dir", "fraction", "cores", "verbose"),
         "Select shared genes & write gene lists",
     ),
     "align": (
