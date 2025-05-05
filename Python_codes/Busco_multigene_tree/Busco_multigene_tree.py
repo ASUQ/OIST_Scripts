@@ -435,7 +435,7 @@ def write_gene_lists(frac_dict: dict[float, list[str]], output_dir: Path) -> Non
 
 
 def align_and_trim(
-    frac_dict: dict[float, list[str]],
+    fractions: list[float],
     output_dir: Path,
     mafft_opts: list[str],
     trimal_opts: list[str],
@@ -455,10 +455,13 @@ def align_and_trim(
             logging.fatal(f"{d} is not empty — aborting to avoid mixing old results")
             sys.exit(1)
 
-    smallest_frac = min(frac_dict.keys())
-    genes = frac_dict[smallest_frac]
+    smallest_frac = min(fractions)
+    genes = load_genes_for_fraction(smallest_frac, output_dir)
+    if not genes:
+        logging.error(f"No genes for the smallest fraction {smallest_frac}.")
+        sys.exit(1)
 
-    logging.debug(
+    logging.info(
         f"Aligning genes in fraction: {smallest_frac} which has {len(genes)} genes"
     )
 
@@ -574,9 +577,7 @@ def main() -> None:
         args.mafft = shlex.split(args.mafft.replace("$CORES", str(args.cores)))
         args.trimal = shlex.split(args.trimal)
 
-        gene_dict, org_set = load_gene_dict(args.out_dir)
-        frac_dict = select_shared_genes(gene_dict, org_set, fracs)
-        align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
+        align_and_trim(fracs, args.out_dir, args.mafft, args.trimal)
 
     elif args.command == "infer":
         logging.info("Running subcommand: infer")
@@ -602,7 +603,7 @@ def main() -> None:
         gene_dict, org_set = collect_gene_seqs(args.input_dir, args.out_dir, args.cores)
         frac_dict = select_shared_genes(gene_dict, org_set, fracs)
         write_gene_lists(frac_dict, args.out_dir)
-        align_and_trim(frac_dict, args.out_dir, args.mafft, args.trimal)
+        align_and_trim(fracs, args.out_dir, args.mafft, args.trimal)
         cafiles = concat_alignments(frac_dict, args.out_dir, args.amas)
         run_iqtree(cafiles, args.out_dir, args.iqtree)
 
