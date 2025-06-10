@@ -6,7 +6,7 @@ Usage:
     sequence_extractor -i <INPUT> -f <FASTA> [-p <PREFIX>] [-o <OUT>] [-h|--help]
 
 Purpose:
-	Extract records from a FASTA file based on a list of record_id
+        Extract records from a FASTA file based on a list of record_id
 
 Options:
     -h, --help                  Show this
@@ -22,6 +22,7 @@ Author: Akito Shima (ASUQ)
 Email: akito-shima@oist.jp
 """
 
+
 def parse_arguments():
     """
     Parse command-line arguments.
@@ -31,46 +32,53 @@ def parse_arguments():
 
     # Command input using argparse
     parser = argparse.ArgumentParser(
-        description= \
-        "Extract records from a FASTA file based on a list of sequence IDs" + '\n' \
-        + '\n' \
-        + "Example:" + '\n' \
-        + '\t' + "sequence_extractor.py -i ids.txt -f sequences.fasta -o ./output -p extracted",
+        description="Extract records from a FASTA file based on a list of sequence IDs"
+        + "\n"
+        + "\n"
+        + "Example:"
+        + "\n"
+        + "\t"
+        + "sequence_extractor.py -i ids.txt -f sequences.fasta -o ./output -p extracted",
         epilog="Required package: Biopython",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-	)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
 
-    required = parser.add_argument_group('required arguments')
-    optional = parser.add_argument_group('optional arguments')
+    required = parser.add_argument_group("required arguments")
+    optional = parser.add_argument_group("optional arguments")
 
     required.add_argument(
-        "-i", "--input",
+        "-i",
+        "--input",
         type=str,
         required=True,
-        help="List of sequences you want (string)"
+        help="List of sequences you want (string)",
     )
 
     required.add_argument(
-        "-f", "--fasta",
+        "-f",
+        "--fasta",
         type=str,
         required=True,
-        help="Fasta file of sequences (string)"
+        help="Fasta file of sequences (string)",
     )
 
     optional.add_argument(
-        "-o", "--out",
+        "-o",
+        "--out",
         type=str,
-        default='./',
-        help="Output directory path  [default: ./]"
+        default="./",
+        help="Output directory path  [default: ./]",
     )
 
     optional.add_argument(
-        "-p", "--prefix",
+        "-p",
+        "--prefix",
         type=str,
-        help="Prefix for output file  [default: input file name]"
+        help="Prefix for output file  [default: input file name]",
     )
 
     return parser.parse_args()
+
 
 def check_required_packages(packages):
     """
@@ -85,8 +93,11 @@ def check_required_packages(packages):
             missing_packages.append(package)
 
     if missing_packages:
-        print(f"Error: The following required packages are missing: {', '.join(missing_packages)}")
+        print(
+            f"Error: The following required packages are missing: {', '.join(missing_packages)}"
+        )
         sys.exit(1)
+
 
 def validate_file(file_path, valid_extensions):
     """
@@ -99,7 +110,10 @@ def validate_file(file_path, valid_extensions):
 
     root, ext = os.path.splitext(file_path)
     if ext.lower() not in valid_extensions:
-        raise ValueError(f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}")
+        raise ValueError(
+            f"File '{file_path}' has an invalid extension. Expected one of: {', '.join(valid_extensions)}"
+        )
+
 
 def find_duplicates(seq_list):
     """
@@ -120,15 +134,16 @@ def find_duplicates(seq_list):
             seen.add(seq_id)
     return duplicates
 
+
 def main():
     # Parse arguments
     args = parse_arguments()
 
-	# Check the installed packages
+    # Check the installed packages
     required_packages = ["Bio"]
     check_required_packages(required_packages)
 
-	# Package import
+    # Package import
     from Bio import SeqIO
     import os.path
     import sys
@@ -139,10 +154,11 @@ def main():
     output_dir = os.path.abspath(args.out)
     prefix = args.prefix
 
-
-	# Check file existence and extension
-    validate_file(nodes, ['.txt'])
-    validate_file(sequences, ['.fasta', '.fas', '.fa', '.fna', '.faa', '.aa'])
+    # Check file existence and extension
+    validate_file(nodes, [".txt"])
+    validate_file(
+        sequences, [".fasta", ".fas", ".fa", ".fna", ".faa", ".aa", ".codingseq"]
+    )
 
     # Make new directory if directory does not exist
     if not os.path.isdir(output_dir):
@@ -152,18 +168,24 @@ def main():
     if prefix is None:
         prefix = os.path.splitext(os.path.basename(nodes))[0]
 
-	# Set the path for the output file
+    # Set the path for the output file
     output_file_path = os.path.join(output_dir, f"{prefix}.fasta")
     if os.path.exists(output_file_path):
-        response = input(f"Output file '{output_file_path}' already exists. Overwrite? (y/N): ").strip().lower()
-        if response != 'y':
+        response = (
+            input(
+                f"Output file '{output_file_path}' already exists. Overwrite? (y/N): "
+            )
+            .strip()
+            .lower()
+        )
+        if response != "y":
             print("Aborting to avoid overwriting the existing file.")
             sys.exit(1)
 
-	#==========================================================#
+    # ==========================================================#
 
-	# Save the sequence ids in names list
-    with open(nodes, 'r') as f:
+    # Save the sequence ids in names list
+    with open(nodes, "r") as f:
         names = []
         for line in f:
             seq_id = line.strip()
@@ -172,33 +194,38 @@ def main():
 
         duplicates = find_duplicates(names)
         if duplicates:
-            print(f"Warning: {len(duplicates)} duplicate sequence IDs found in the input file: {', '.join(duplicates)}")
+            print(
+                f"Warning: {len(duplicates)} duplicate sequence IDs found in the input file: {', '.join(duplicates)}"
+            )
 
         if not names:
             print("Input file is empty. Please provide a file with sequence IDs.")
             sys.exit(1)
 
     # Load the Fasta file into a dictionary to preserve order based on the input list
-    fasta_dict = SeqIO.to_dict(SeqIO.parse(open(sequences), 'fasta'))
+    fasta_dict = SeqIO.to_dict(SeqIO.parse(open(sequences), "fasta"))
 
     # Extract sequences of the targets and save as fasta file
     found_ids = set()
-    with open(output_file_path, 'w') as output_handle:
+    with open(output_file_path, "w") as output_handle:
         for seq_id in names:
             if seq_id in fasta_dict:
-                SeqIO.write(fasta_dict[seq_id], output_handle, 'fasta')
+                SeqIO.write(fasta_dict[seq_id], output_handle, "fasta")
                 found_ids.add(seq_id)
 
     unmatched_ids = [name for name in names if name not in found_ids]
     if unmatched_ids:
-        print(f"Warning: The following sequence IDs were not found in the FASTA file: {', '.join(unmatched_ids)}")
+        print(
+            f"Warning: The following sequence IDs were not found in the FASTA file: {', '.join(unmatched_ids)}"
+        )
 
     if output_handle:
         print(f"Sequences have been written to {output_file_path}")
 
     else:
-        print('No sequence were found.')
+        print("No sequence were found.")
         sys.exit(1)
 
-if __name__ == '__main__':
-	main()
+
+if __name__ == "__main__":
+    main()
