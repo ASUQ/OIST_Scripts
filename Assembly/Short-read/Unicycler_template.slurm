@@ -78,8 +78,8 @@ read_r='<Illumina reverse read>.fastq.gz'
 #------------------------------------#
 
 #-------------Parameters-------------#
-THREADS='<number of CPUs>'	# More than 16 is recommended
-MEMORY='<size of RAM>'  # More than 100 GB is recommended
+THREADS="$SLURM_CPUS_PER_TASK"
+MEMORY="$SLURM_MEM_PER_NODE"
 #------------------------------------#
 
 

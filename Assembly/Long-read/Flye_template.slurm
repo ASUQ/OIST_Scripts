@@ -68,8 +68,8 @@ long_read='<Long read>.fastq.gz'	# Adjust the Flye option based on your read typ
 #------------------------------------#
 
 #-------------Parameters-------------#
-THREADS='<number of CPUs>'	# More than 16 is recommended
-# MEMORY='<size of RAM>'  	# More than 100 GB is recommended
+THREADS="$SLURM_CPUS_PER_TASK"
+# MEMORY="$SLURM_MEM_PER_NODE"
 #------------------------------------#
 
 

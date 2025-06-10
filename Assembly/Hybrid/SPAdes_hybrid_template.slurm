@@ -69,8 +69,8 @@ long_read='<Long read>.fastq.gz'	# Adjust the SPAdes option based on your read t
 #------------------------------------#
 
 #-------------Parameters-------------#
-THREADS='<number of CPUs>'	# More than 16 is recommended
-MEMORY='<size of RAM>'		# More than 100G is recommended
+THREADS="$SLURM_CPUS_PER_TASK"
+MEMORY="$SLURM_MEM_PER_NODE"
 #------------------------------------#
 
 

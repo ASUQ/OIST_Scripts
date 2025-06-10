@@ -72,8 +72,8 @@ long_read='<Long read>.fastq.gz'	# Adjust the minimap2 option based on your read
 #------------------------------------#
 
 #-------------Parameters-------------#
-THREADS='<number of CPUs>'	# More than 16 is recommended
-# MEMORY='<size of RAM>'
+THREADS="$SLURM_CPUS_PER_TASK"
+# MEMORY="$SLURM_MEM_PER_NODE"
 #------------------------------------#
 
 
