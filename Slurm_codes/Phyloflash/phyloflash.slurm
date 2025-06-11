@@ -42,7 +42,7 @@ set -euo pipefail
 #-------------Softwares--------------#
 # Conda env paths
 MINICONDA_DIR='Path to miniconda directory'
-PHYLOFLASH_CONDA='Path to blobtools conda environment'
+PHYLOFLASH_CONDA='Path to phyloflash conda environment'
 
 # Software paths
 
@@ -105,7 +105,7 @@ run_phyloflash() {
 	return 0
 }
 
-main() {\
+main() {
     ## Add conda to your PATH
 	activate_conda
 
