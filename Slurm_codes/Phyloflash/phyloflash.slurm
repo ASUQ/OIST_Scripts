@@ -92,7 +92,7 @@ run_phyloflash() {
     conda activate "${PHYLOFLASH_CONDA}"
 
     phyloFlash.pl -lib "${SAMPLE}" -read1 "${read_f}" -read2 "${read_r}" \
-        -dbhome "${PHYLOFLASH_DB}" -CPUs $((THREADS)) -everything > "${RUN_DIR}/phyloflash.output"
+        -dbhome "${PHYLOFLASH_DB}" -CPUs $((THREADS)) -everything
 
     conda deactivate
 
