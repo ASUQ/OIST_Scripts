@@ -266,84 +266,68 @@ def collect_gene_seqs(
 
     logging.info("Collecting genes from BUSCO outputs")
 
-    seq_dirs = [
-        d
-        for d in input_dir.rglob("*_copy_busco_sequences", recurse_symlinks=True)
-        if d.is_dir()
-    ]
-
-    if not seq_dirs:
+    # 1. find both single- and multi-copy directories
+    all_dirs = [d for d in input_dir.rglob("*_copy_busco_sequences") if d.is_dir()]
+    if not all_dirs:
         logging.error(f"No BUSCO output directories found in {input_dir}")
         sys.exit(1)
 
-    logging.info(f"Found {len(seq_dirs)} samples; parsing with {cores} threads")
-
-    def parse_sample(seq_dir: Path) -> tuple[str, dict[str, list[SeqRecord]]]:
-        """Function to parse a single sample directory"""
+    # 2. group by sample name (extracted the same way you did before)
+    sample_dirs: dict[str, list[Path]] = defaultdict(list)
+    for d in all_dirs:
         try:
-            org_name = seq_dir.relative_to(input_dir).parts[-5]
+            sample = d.relative_to(input_dir).parts[-5]
         except IndexError:
-            raise ValueError(
-                f"Directory {seq_dir} is too shallow for extracting sample name."
-            )
+            logging.error(f"Can't extract sample name from path: {d}")
+            sys.exit(1)
+        sample_dirs[sample].append(d)
 
-        is_multi = seq_dir.name == "multi_copy_busco_sequences"
+    logging.info(
+        f"Found {len(sample_dirs)} samples "
+        f"(across {len(all_dirs)} single/multi dirs); parsing with {cores} threads"
+    )
+
+    def parse_sample(sample: str, dirs: list[Path]):
+        """Function to parse a single sample directory"""
 
         local: dict[str, list[SeqRecord]] = defaultdict(list)
-        for faa_file in seq_dir.glob("*.faa"):
-            logging.debug(f"Extracting gene seq from {str(faa_file)}")
-            try:
+        for seq_dir in dirs:
+            is_multi = seq_dir.name == "multi_copy_busco_sequences"
+            for faa_file in seq_dir.glob("*.faa"):
+                logging.debug(f"Extracting gene seq from {str(faa_file)}")
                 gene = faa_file.stem
-
                 if is_multi:
-                    # Only parse the first record for multi-copy BUSCOs
-                    it = SeqIO.parse(faa_file, "fasta")
-                    first = next(it, None)
-                    if first:
-                        first.id = org_name
-                        first.description = ""
-                        local[gene].append(first)
-
-                else:
-                    for rec in SeqIO.parse(faa_file, "fasta"):
-                        rec.id = org_name
+                    # only first record
+                    rec = next(SeqIO.parse(faa_file, "fasta"), None)
+                    if rec:
+                        rec.id = sample
                         rec.description = ""
                         local[gene].append(rec)
+                else:
+                    # all (should be one) record(s)
+                    for rec in SeqIO.parse(faa_file, "fasta"):
+                        rec.id = sample
+                        rec.description = ""
+                        local[gene].append(rec)
+        return sample, local
 
-            except Exception as err:
-                raise RuntimeError(
-                    f"Sample='{org_name}', File='{faa_file}': {err}"
-                ) from err
-
-        return org_name, local
-
-    # Run parsing in parallel
+    # 4. run in parallel over unique samples
     results: list[tuple[str, dict[str, list[SeqRecord]]]] = []
     with ThreadPoolExecutor(max_workers=cores) as pool:
-        futures_to_dir: dict[Future, Path] = {
-            pool.submit(parse_sample, d): d for d in seq_dirs
+        futures = {
+            pool.submit(parse_sample, sample, dirs): sample
+            for sample, dirs in sample_dirs.items()
         }
+        for future in tqdm(
+            as_completed(futures), total=len(futures), desc="Parsing samples"
+        ):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logging.error(f"Error parsing sample {futures[future]}: {e}")
+                sys.exit(1)
 
-        try:
-            for future in tqdm(
-                as_completed(futures_to_dir),
-                total=len(futures_to_dir),
-                desc="Parsing samples",
-            ):
-                org_name, local = future.result()
-                results.append((org_name, local))
-
-        except Exception as e:
-            failed_dir = futures_to_dir[future]
-            sample_name = failed_dir.relative_to(input_dir).parts[-5]
-            logging.error(
-                f"Aborting: error in sample '{sample_name}', dir '{failed_dir}': {e}"
-            )
-            for f in futures_to_dir:
-                f.cancel()
-            sys.exit(1)
-
-    logging.info(f"Parsed {len(results)} samples")
+    logging.info(f"Parsed {len(results)} samples successfully")
 
     gene_dict: dict[str, set[str]] = defaultdict(set)
     org_set: set[str] = set()
