@@ -267,7 +267,11 @@ def collect_gene_seqs(
     logging.info("Collecting genes from BUSCO outputs")
 
     # 1. find both single- and multi-copy directories
-    all_dirs = [d for d in input_dir.rglob("*_copy_busco_sequences") if d.is_dir()]
+    all_dirs = [
+        d
+        for d in input_dir.rglob("*_copy_busco_sequences", recurse_symlinks=True)
+        if d.is_dir()
+    ]
     if not all_dirs:
         logging.error(f"No BUSCO output directories found in {input_dir}")
         sys.exit(1)
