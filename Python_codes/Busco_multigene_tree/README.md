@@ -26,7 +26,7 @@ This pipeline automates extraction of BUSCO single-copy orthologs across multipl
 
 - Linux or macOS
 - [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-- Python 3.9+
+- Python 3.13+
 
 
 ## Installation
@@ -39,7 +39,7 @@ This pipeline automates extraction of BUSCO single-copy orthologs across multipl
 
 2. Create and activate a conda environment
 	```bash
-	conda create -n busco_phylogeny 'python>=3.9' \
+	conda create -n busco_phylogeny 'python>=3.13' \
 		biopython tqdm mafft trimal iqtree amas \
 		-c conda-forge -c bioconda
 	conda activate busco_phylogeny

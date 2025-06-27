@@ -172,7 +172,7 @@ SUBCMD_OPTS = {
 }
 
 # Python version check
-REQUIRED = (3, 9)
+REQUIRED = (3, 13)
 if sys.version_info < REQUIRED:
     logging.fatal(
         f"this script requires Python {REQUIRED[0]}.{REQUIRED[1]}+, "
@@ -268,7 +268,7 @@ def collect_gene_seqs(
 
     seq_dirs = [
         d
-        for d in input_dir.rglob("single_copy_busco_sequences", recurse_symlinks=True)
+        for d in input_dir.rglob("*_copy_busco_sequences", recurse_symlinks=True)
         if d.is_dir()
     ]
 
@@ -287,15 +287,28 @@ def collect_gene_seqs(
                 f"Directory {seq_dir} is too shallow for extracting sample name."
             )
 
+        is_multi = seq_dir.name == "multi_copy_busco_sequences"
+
         local: dict[str, list[SeqRecord]] = defaultdict(list)
         for faa_file in seq_dir.glob("*.faa"):
             logging.debug(f"Extracting gene seq from {str(faa_file)}")
             try:
                 gene = faa_file.stem
-                for rec in SeqIO.parse(faa_file, "fasta"):
-                    rec.id = org_name
-                    rec.description = ""
-                    local[gene].append(rec)
+
+                if is_multi:
+                    # Only parse the first record for multi-copy BUSCOs
+                    it = SeqIO.parse(faa_file, "fasta")
+                    first = next(it, None)
+                    if first:
+                        first.id = org_name
+                        first.description = ""
+                        local[gene].append(first)
+
+                else:
+                    for rec in SeqIO.parse(faa_file, "fasta"):
+                        rec.id = org_name
+                        rec.description = ""
+                        local[gene].append(rec)
 
             except Exception as err:
                 raise RuntimeError(
